@@ -98,7 +98,7 @@ function sleep(ms) {
 // sinon on écrit des faux négatifs définitifs dans le cache.
 async function searchOnce(query, attempt = 1) {
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=1`
-  const res = await fetch(url, { headers: { 'User-Agent': 'Japplan-personal-trip-app/1.0' } })
+  const res = await fetch(url, { headers: { 'User-Agent': 'TripPlan-personal-trip-app/1.0' } })
   if (res.status === 429) {
     if (attempt > 5) throw new Error('Toujours rate-limited après 5 tentatives, abandon.')
     const wait = 6000 * attempt

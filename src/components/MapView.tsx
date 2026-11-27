@@ -7,6 +7,7 @@ import { DEFAULT_WISHLIST_STAMP_LABEL, type Trip, type Stage, type TransportLeg,
 import { ALL_CATEGORIES, TRANSPORT_COLORS, TRAIL_COLOR, type ResolvedTheme } from '../theme/categories'
 import MapFilterModal from './MapFilterModal'
 import { OfflinePmtilesSource, OFFLINE_PMTILES_KEY } from '../utils/offlinePmtilesSource'
+import { getDefaultMapCamera, saveDefaultMapCamera, type MapCamera } from '../data/mapViewPreferences'
 import { DriveFile } from '../plugins/DriveFile'
 import { getCachedRoute, setCachedRoute } from '../utils/routeCache'
 import { formatDayLabel } from '../utils/formatDate'
@@ -237,10 +238,16 @@ export default function MapView({
   const [wishlistOnly, setWishlistOnly] = useState(false)
   const [plannedOnly, setPlannedOnly] = useState(false)
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
+  const [defaultCamera, setDefaultCamera] = useState<MapCamera | null>(null)
+  const [viewSaved, setViewSaved] = useState(false)
+
+  useEffect(() => {
+    getDefaultMapCamera().then(setDefaultCamera)
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
-    if (!container || mapRef.current) return
+    if (!container || mapRef.current || !defaultCamera) return
 
     const sortedStages = [...trip.stages].sort((a, b) => a.order - b.order)
 
@@ -251,8 +258,8 @@ export default function MapView({
     const map = new maplibregl.Map({
       container,
       style: offline && offlineMapUri ? buildOfflineStyle(theme) : MAP_STYLES[theme],
-      center: [136.5, 36.5],
-      zoom: 5,
+      center: [defaultCamera.lng, defaultCamera.lat],
+      zoom: defaultCamera.zoom,
       // Replié en icône (i) plutôt que masqué : l'attribution OpenStreetMap/
       // OpenFreeMap reste requise par leur licence, juste moins envahissante.
       attributionControl: { compact: true },
@@ -510,7 +517,7 @@ export default function MapView({
     // selectedActivityId/offline/offlineMapUri/theme at mount time are the
     // only values that matter here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [defaultCamera])
 
   useEffect(() => {
     // "Envie de faire" et "Planifiées" sont des filtres rapides indépendants des
@@ -566,6 +573,15 @@ export default function MapView({
     setPlannedOnly(false)
   }
 
+  async function handleSaveDefaultView() {
+    const map = mapRef.current
+    if (!map) return
+    const center = map.getCenter()
+    await saveDefaultMapCamera({ lng: center.lng, lat: center.lat, zoom: map.getZoom() })
+    setViewSaved(true)
+    window.setTimeout(() => setViewSaved(false), 2000)
+  }
+
   return (
     <div className="map-wrapper">
       <div ref={containerRef} className="map-container" />
@@ -581,6 +597,15 @@ export default function MapView({
             {activeFilterCount}
           </Chip>
         )}
+      </Button>
+      <Button
+        variant="ghost"
+        icon="flag"
+        className="map-default-view-btn"
+        onClick={handleSaveDefaultView}
+        title="Utiliser la vue actuelle (centre + zoom) comme affichage par défaut de la carte"
+      >
+        {viewSaved ? 'Vue enregistrée ✓' : 'Vue par défaut'}
       </Button>
       {filterPanelOpen && (
         <MapFilterModal

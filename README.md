@@ -1,4 +1,4 @@
-# Japplan
+# TripPlan
 
 App perso (React + Vite, 100 % web) de suivi de voyages : carte interactive, planning par étape/par jour, liste d'activités. Accessible depuis un navigateur (desktop ou mobile) via une connexion Google Drive OAuth2, ou entièrement hors connexion grâce au stockage local du navigateur.
 

@@ -65,7 +65,7 @@ export function parseDatabaseContent(content: string): { database: Database; mig
   // ne sait que monter en version) le traiter comme déjà à jour.
   if (parsed.schemaVersion !== undefined && parsed.schemaVersion > CURRENT_SCHEMA_VERSION) {
     throw new SchemaTooNewError(
-      'Cette base a été mise à jour par une version plus récente de Japplan — mets à jour l’app avant de continuer.',
+      'Cette base a été mise à jour par une version plus récente de TripPlan — mets à jour l’app avant de continuer.',
     )
   }
 

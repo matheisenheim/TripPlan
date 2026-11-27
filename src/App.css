@@ -109,6 +109,15 @@
   box-shadow: var(--elev-fab);
 }
 
+.map-default-view-btn {
+  position: absolute;
+  left: var(--sp-2);
+  bottom: calc(var(--sp-2) + 48px);
+  z-index: 5;
+  background: var(--surface-1);
+  box-shadow: var(--elev-fab);
+}
+
 .tab-bar {
   flex-shrink: 0;
   display: flex;
