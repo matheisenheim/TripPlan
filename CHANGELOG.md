@@ -23,6 +23,8 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 ### Corrigé
 - Champ coordonnées : les champs Latitude/Longitude ne s'affichent plus une fois un lieu choisi dans les résultats de recherche (le lieu choisi est affiché, avec un bouton « Effacer ») ; le lien « Lieu introuvable ? » est renommé « Saisir les coordonnées manuellement » pour ne plus ressembler à un message d'erreur
 - Page blanche sur mobile : si la création de la carte MapLibre échoue (ex. WebGL indisponible) dans un `useEffect`, React 19 démontait tout l'arbre — la création est désormais protégée et affiche un fallback « Carte indisponible » (les autres onglets restent utilisables) ; les erreurs JS sont aussi affichées à l'écran via un gestionnaire inline dans `index.html` (debug mobile)
+- Page blanche après création d'un voyage sans étape : `fitBounds` n'est plus appelé sur un `LngLatBounds` vide (crash `reading 'lng'` dans MapLibre)
+- Champ coordonnées : les champs Latitude/Longitude sont supprimés ; le lieu choisi reste affiché dans le champ de recherche (sans relancer la recherche), avec un bouton « Effacer le lieu »
 
 ### Modifié
 - Projet renommé Japplan → TripPlan (titre de l'onglet, nom du package, README, page de confidentialité, pied des paramètres)

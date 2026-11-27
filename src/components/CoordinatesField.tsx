@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { isUnresolvableMapsLink, parseLocationInput, searchPlaces, type NominatimResult } from '../utils/nominatimSearch'
 import Field from './ui/Field'
 import Button from './ui/Button'
@@ -11,7 +11,10 @@ interface CoordinatesFieldProps {
   onChange: (lat: string, lng: string) => void
 }
 
-export default function CoordinatesField({ legend, lat, lng, onChange }: CoordinatesFieldProps) {
+// lat/lng restent dans les props (renseignés par le parent à la soumission) mais
+// ne sont plus affichés : on choisit un lieu par recherche, sur la carte, ou en
+// collant des coordonnées.
+export default function CoordinatesField({ legend, onChange }: CoordinatesFieldProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<NominatimResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -20,9 +23,17 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
   const [pastedUrl, setPastedUrl] = useState('')
   const [pasteError, setPasteError] = useState<string>()
   const [pickedName, setPickedName] = useState<string>()
+  const pickedNameRef = useRef<string | undefined>(undefined)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   useEffect(() => {
+    // Le nom du lieu choisi reste affiché dans le champ : ne pas relancer de
+    // recherche dessus.
+    if (pickedNameRef.current && query.trim() === pickedNameRef.current) {
+      setResults([])
+      setSearchError(undefined)
+      return
+    }
     if (query.trim().length < 3) {
       setResults([])
       setSearchError(undefined)
@@ -53,13 +64,17 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
   function selectResult(result: NominatimResult) {
     onChange(String(result.lat), String(result.lng))
     setPickedName(result.displayName)
-    setQuery('')
+    pickedNameRef.current = result.displayName
+    // Le lieu choisi reste affiché dans le champ de recherche.
+    setQuery(result.displayName)
     setResults([])
   }
 
   function clearPicked() {
     onChange('', '')
     setPickedName(undefined)
+    pickedNameRef.current = undefined
+    setQuery('')
   }
 
   function handlePaste(value: string) {
@@ -68,6 +83,7 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
     if (parsed) {
       onChange(String(parsed.lat), String(parsed.lng))
       setPickedName(undefined)
+      pickedNameRef.current = undefined
       setPasteError(undefined)
     } else if (!value.trim()) {
       setPasteError(undefined)
@@ -99,12 +115,9 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
         </ul>
       )}
       {pickedName && (
-        <p className="coordinates-field__hint">
-          Lieu choisi : {pickedName}{' '}
-          <Button variant="link" size="sm" onClick={clearPicked}>
-            Effacer
-          </Button>
-        </p>
+        <Button variant="link" size="sm" onClick={clearPicked}>
+          Effacer le lieu
+        </Button>
       )}
 
       <Button variant="link" size="sm" onClick={() => setPickerOpen(true)}>
@@ -121,16 +134,6 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
       )}
       {pasteError && <p className="coordinates-field__hint coordinates-field__hint--error">{pasteError}</p>}
 
-      {!pickedName && (
-        <div className="field-row">
-          <Field label="Latitude">
-            <input type="text" inputMode="decimal" value={lat} onChange={(e) => onChange(e.target.value, lng)} />
-          </Field>
-          <Field label="Longitude">
-            <input type="text" inputMode="decimal" value={lng} onChange={(e) => onChange(lat, e.target.value)} />
-          </Field>
-        </div>
-      )}
       {pickerOpen && (
         <MapPickerModal
           onPick={(coords, name) => {

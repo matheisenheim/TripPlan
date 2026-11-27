@@ -223,9 +223,12 @@ export default function MapView({
       pmtilesProtocol.add(new PMTiles(new OfflinePmtilesSource(offlineMapUri)))
     }
 
-    let map: maplibregl.Map
+    // Déclarés hors du try pour rester accessibles au cleanup ci-dessous.
+    let cancelLongPress: () => void = () => {}
+    let handleGotoClick: (e: MouseEvent) => void = () => {}
+    let createdMap: maplibregl.Map | null = null
     try {
-      map = new maplibregl.Map({
+      const map = new maplibregl.Map({
         container,
         style: offline && offlineMapUri ? buildOfflineStyle(theme) : MAP_STYLES[theme],
         center: [defaultCamera.lng, defaultCamera.lat],
@@ -235,253 +238,260 @@ export default function MapView({
         attributionControl: { compact: true },
       })
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+      createdMap = map
+      mapRef.current = map
+
+        // MapLibre fails a source/tile fetch by firing 'error' without ever throwing or
+        // logging anything on its own — without this listener a broken style/source (e.g.
+        // the offline pmtiles source) shows a blank map with zero diagnostic trace.
+        map.on('error', (e) => console.error('MapLibre error:', e.error))
+
+        // Appui long (ou clic droit sur desktop) plutôt qu'un simple tap, pour
+        // éviter de faire apparaître ce popup au moindre clic accidentel.
+        function showAddressPopup(lngLat: maplibregl.LngLat) {
+          clickPopupRef.current?.remove()
+          const popup = new maplibregl.Popup({ offset: 4 })
+            .setLngLat(lngLat)
+            .setHTML('<em>Recherche…</em>')
+            .addTo(map)
+          clickPopupRef.current = popup
+
+          const coords = { lat: lngLat.lat, lng: lngLat.lng }
+          reverseGeocode(lngLat.lat, lngLat.lng)
+            .then((label) => popup.setHTML(`<strong>${escapeHtml(label)}</strong>${navLinkHtml(coords)}`))
+            .catch(() => popup.setHTML(`<em>Adresse introuvable</em>${navLinkHtml(coords)}`))
+        }
+
+        function isOnMarkerOrPopup(target: EventTarget | null) {
+          return (
+            target instanceof HTMLElement &&
+            (target.closest('.maplibregl-marker') || target.closest('.maplibregl-popup'))
+          )
+        }
+
+        // Desktop: navigateur natif (clic droit).
+        map.on('contextmenu', (e) => {
+          if (isOnMarkerOrPopup(e.originalEvent.target)) return
+          e.originalEvent.preventDefault()
+          showAddressPopup(e.lngLat)
+        })
+
+        // Mobile: MapLibre gère lui-même le pan/zoom tactile, donc le
+        // "contextmenu" natif du navigateur ne se déclenche pas de façon fiable
+        // au toucher long — on détecte l'appui long nous-mêmes.
+        const LONG_PRESS_MS = 550
+        const MOVE_CANCEL_PX = 10
+        let longPressTimer: ReturnType<typeof setTimeout> | null = null
+        let longPressStart: { lngLat: maplibregl.LngLat; point: maplibregl.Point } | null = null
+
+        cancelLongPress = function cancelLongPress() {
+          if (longPressTimer) clearTimeout(longPressTimer)
+          longPressTimer = null
+          longPressStart = null
+        }
+
+        map.on('touchstart', (e) => {
+          if (e.points.length > 1 || isOnMarkerOrPopup(e.originalEvent.target)) {
+            cancelLongPress()
+            return
+          }
+          longPressStart = { lngLat: e.lngLat, point: e.point }
+          longPressTimer = setTimeout(() => {
+            if (longPressStart) showAddressPopup(longPressStart.lngLat)
+            longPressTimer = null
+          }, LONG_PRESS_MS)
+        })
+        map.on('touchmove', (e) => {
+          if (!longPressStart) return
+          if (e.point.dist(longPressStart.point) > MOVE_CANCEL_PX) cancelLongPress()
+        })
+        map.on('touchend', cancelLongPress)
+        map.on('touchcancel', cancelLongPress)
+        map.on('dragstart', cancelLongPress)
+
+        // Un seul listener délégué pour tous les boutons "Voir dans…" des popups,
+        // plutôt qu'un par popup — évite de dépendre du cycle de vie DOM interne
+        // (création/réouverture) des Popup MapLibre.
+        handleGotoClick = function handleGotoClick(e: MouseEvent) {
+          const btn = (e.target as HTMLElement).closest('.popup-goto-btn')
+          if (!btn) return
+          const kind = btn.getAttribute('data-goto-kind')
+          const id = btn.getAttribute('data-goto-id')
+          if (!id) return
+          if (kind === 'stage') onGoToStage(id)
+          else if (kind === 'activity') onGoToActivity(id)
+        }
+        container.addEventListener('click', handleGotoClick)
+
+        sortedStages.forEach((stage) => {
+          const marker = new maplibregl.Marker({ element: makeStageMarkerEl(stage.order) })
+            .setLngLat([stage.coordinates.lng, stage.coordinates.lat])
+            .setPopup(new maplibregl.Popup({ offset: 18 }).setHTML(stagePopupHtml(stage)))
+            .addTo(map)
+          markersRef.current[stage.id] = marker
+
+          // Logements de la même étape situés ailleurs (ex: deux ryokans dans le
+          // même village) : un pin dédié pour pouvoir consulter leurs dates.
+          stage.accommodations
+            .filter(
+              (acc) =>
+                acc.coordinates &&
+                (acc.coordinates.lat !== stage.coordinates.lat || acc.coordinates.lng !== stage.coordinates.lng),
+            )
+            .forEach((acc) => {
+              new maplibregl.Marker({ element: makeAccommodationMarkerEl() })
+                .setLngLat([acc.coordinates!.lng, acc.coordinates!.lat])
+                .setPopup(
+                  new maplibregl.Popup({ offset: 14 }).setHTML(
+                    `<strong>${escapeHtml(stage.city)}</strong><div>${escapeHtml(acc.name)}<br>${formatDateRange(acc.checkIn, acc.checkOut)}</div><div class="popup-actions">${gotoStageButtonHtml(stage.id)}${navLinkHtml(acc.coordinates!)}</div>`,
+                  ),
+                )
+                .addTo(map)
+            })
+
+          stage.excursions
+            .filter((ex) => ex.coordinates)
+            .forEach((ex) => {
+              new maplibregl.Marker({ element: makeExcursionMarkerEl() })
+                .setLngLat([ex.coordinates!.lng, ex.coordinates!.lat])
+                .setPopup(
+                  new maplibregl.Popup({ offset: 12 }).setHTML(
+                    `<strong>${escapeHtml(ex.name)}</strong><br>${new Date(ex.date).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}${ex.notes ? `<br><em>${escapeHtml(ex.notes)}</em>` : ''}<div class="popup-actions">${gotoStageButtonHtml(stage.id)}${navLinkHtml(ex.coordinates!)}</div>`,
+                  ),
+                )
+                .addTo(map)
+            })
+        })
+
+        const wishlistLabel = trip.wishlistStampLabel ?? DEFAULT_WISHLIST_STAMP_LABEL
+        ;(trip.activities ?? [])
+          .filter((activity) => activity.coordinates)
+          .forEach((activity) => {
+            const marker = new maplibregl.Marker({ element: makeActivityMarkerEl(activity.categories) })
+              .setLngLat([activity.coordinates!.lng, activity.coordinates!.lat])
+              .setPopup(new maplibregl.Popup({ offset: 10 }).setHTML(activityPopupHtml(activity, wishlistLabel)))
+              .addTo(map)
+            marker.getElement().style.display = 'none'
+            activityMarkerByIdRef.current[activity.id] = marker
+          })
+
+        map.on('load', () => {
+          // Les chemins/sentiers (highway=path) sont déjà présents dans les tuiles
+          // (couche transportation en ligne, roads hors ligne) mais peu visibles
+          // par défaut — on les fait ressortir pour repérer les sentiers de rando.
+          if (offline && offlineMapUri) {
+            map.addLayer({
+              id: 'hiking-paths',
+              type: 'line',
+              source: OFFLINE_SOURCE_NAME,
+              'source-layer': 'roads',
+              filter: ['==', 'kind', 'path'],
+              minzoom: 11,
+              paint: {
+                'line-color': TRAIL_COLOR[theme],
+                'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1, 16, 3],
+                'line-dasharray': [1.5, 0.75],
+              },
+            })
+          } else if (map.getLayer('highway-path')) {
+            map.setLayerZoomRange('highway-path', 11, 24)
+            map.setPaintProperty('highway-path', 'line-color', TRAIL_COLOR[theme])
+            map.setPaintProperty('highway-path', 'line-width', ['interpolate', ['linear'], ['zoom'], 11, 1, 16, 3])
+          }
+
+          if (selectedActivityId) {
+            const activity = (trip.activities ?? []).find((a) => a.id === selectedActivityId)
+            if (activity?.coordinates) {
+              map.jumpTo({ center: [activity.coordinates.lng, activity.coordinates.lat], zoom: 16 })
+              activityMarkerByIdRef.current[selectedActivityId]?.togglePopup()
+            }
+          } else if (selectedStageId) {
+            const stage = sortedStages.find((s) => s.id === selectedStageId)
+            if (stage) {
+              map.jumpTo({ center: [stage.coordinates.lng, stage.coordinates.lat], zoom: 11 })
+              markersRef.current[selectedStageId]?.togglePopup()
+            }
+          } else {
+            if (sortedStages.length > 0) {
+              const bounds = new maplibregl.LngLatBounds()
+              sortedStages.forEach((stage) => bounds.extend([stage.coordinates.lng, stage.coordinates.lat]))
+              map.fitBounds(bounds, { padding: 40, duration: 0 })
+            }
+          }
+
+          const excursionLegs: TransportLeg[] = sortedStages.flatMap((stage) =>
+            stage.excursions
+              .filter((ex): ex is typeof ex & { mode: TransportMode; coordinates: NonNullable<typeof ex.coordinates> } =>
+                Boolean(ex.mode && ex.coordinates),
+              )
+              .map((ex) => ({
+                id: ex.id,
+                mode: ex.mode,
+                from: stage.city,
+                to: ex.name,
+                fromCoordinates: stage.coordinates,
+                toCoordinates: ex.coordinates,
+              })),
+          )
+          const legs = [
+            ...sortedStages.flatMap((stage) => stage.arrivalLegs ?? []),
+            ...excursionLegs,
+            ...(trip.departureLegs ?? []),
+          ]
+          Promise.all(legs.map((leg) => fetchLegCoordinates(leg))).then((coordsList) => {
+            const legsByMode: Record<TransportMode, [number, number][][]> = {
+              shinkansen: [],
+              train: [],
+              bus: [],
+              plane: [],
+              ferry: [],
+            }
+            legs.forEach((leg, i) => legsByMode[leg.mode].push(coordsList[i]))
+
+            ;(Object.keys(legsByMode) as TransportMode[]).forEach((mode) => {
+              const lines = legsByMode[mode]
+              if (lines.length === 0) return
+              const sourceId = `route-${mode}`
+              if (map.getSource(sourceId)) return
+              map.addSource(sourceId, {
+                type: 'geojson',
+                data: {
+                  type: 'FeatureCollection',
+                  features: lines.map((coordinates) => ({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'LineString', coordinates },
+                  })),
+                },
+              })
+              map.addLayer({
+                id: sourceId,
+                type: 'line',
+                source: sourceId,
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: routeLineStyle(mode, theme),
+              })
+            })
+          })
+        })
+
     } catch (e) {
-      // WebGL indisponible, worker bloqué, etc. Sans cette garde, l'erreur levée
-      // dans un useEffect ferait démontager tout l'arbre par React 19 → page blanche.
+      // Toute erreur dans ce setup (WebGL indisponible, fitBounds sur bounds
+      // vide, source PMTiles cassée…) ferait sinon démontager tout l'arbre par
+      // React 19 → page blanche.
+      createdMap?.remove()
+      mapRef.current = null
       setMapError(e instanceof Error ? e.message : String(e))
       return
     }
-    mapRef.current = map
-
-    // MapLibre fails a source/tile fetch by firing 'error' without ever throwing or
-    // logging anything on its own — without this listener a broken style/source (e.g.
-    // the offline pmtiles source) shows a blank map with zero diagnostic trace.
-    map.on('error', (e) => console.error('MapLibre error:', e.error))
-
-    // Appui long (ou clic droit sur desktop) plutôt qu'un simple tap, pour
-    // éviter de faire apparaître ce popup au moindre clic accidentel.
-    function showAddressPopup(lngLat: maplibregl.LngLat) {
-      clickPopupRef.current?.remove()
-      const popup = new maplibregl.Popup({ offset: 4 })
-        .setLngLat(lngLat)
-        .setHTML('<em>Recherche…</em>')
-        .addTo(map)
-      clickPopupRef.current = popup
-
-      const coords = { lat: lngLat.lat, lng: lngLat.lng }
-      reverseGeocode(lngLat.lat, lngLat.lng)
-        .then((label) => popup.setHTML(`<strong>${escapeHtml(label)}</strong>${navLinkHtml(coords)}`))
-        .catch(() => popup.setHTML(`<em>Adresse introuvable</em>${navLinkHtml(coords)}`))
-    }
-
-    function isOnMarkerOrPopup(target: EventTarget | null) {
-      return (
-        target instanceof HTMLElement &&
-        (target.closest('.maplibregl-marker') || target.closest('.maplibregl-popup'))
-      )
-    }
-
-    // Desktop: navigateur natif (clic droit).
-    map.on('contextmenu', (e) => {
-      if (isOnMarkerOrPopup(e.originalEvent.target)) return
-      e.originalEvent.preventDefault()
-      showAddressPopup(e.lngLat)
-    })
-
-    // Mobile: MapLibre gère lui-même le pan/zoom tactile, donc le
-    // "contextmenu" natif du navigateur ne se déclenche pas de façon fiable
-    // au toucher long — on détecte l'appui long nous-mêmes.
-    const LONG_PRESS_MS = 550
-    const MOVE_CANCEL_PX = 10
-    let longPressTimer: ReturnType<typeof setTimeout> | null = null
-    let longPressStart: { lngLat: maplibregl.LngLat; point: maplibregl.Point } | null = null
-
-    function cancelLongPress() {
-      if (longPressTimer) clearTimeout(longPressTimer)
-      longPressTimer = null
-      longPressStart = null
-    }
-
-    map.on('touchstart', (e) => {
-      if (e.points.length > 1 || isOnMarkerOrPopup(e.originalEvent.target)) {
-        cancelLongPress()
-        return
-      }
-      longPressStart = { lngLat: e.lngLat, point: e.point }
-      longPressTimer = setTimeout(() => {
-        if (longPressStart) showAddressPopup(longPressStart.lngLat)
-        longPressTimer = null
-      }, LONG_PRESS_MS)
-    })
-    map.on('touchmove', (e) => {
-      if (!longPressStart) return
-      if (e.point.dist(longPressStart.point) > MOVE_CANCEL_PX) cancelLongPress()
-    })
-    map.on('touchend', cancelLongPress)
-    map.on('touchcancel', cancelLongPress)
-    map.on('dragstart', cancelLongPress)
-
-    // Un seul listener délégué pour tous les boutons "Voir dans…" des popups,
-    // plutôt qu'un par popup — évite de dépendre du cycle de vie DOM interne
-    // (création/réouverture) des Popup MapLibre.
-    function handleGotoClick(e: MouseEvent) {
-      const btn = (e.target as HTMLElement).closest('.popup-goto-btn')
-      if (!btn) return
-      const kind = btn.getAttribute('data-goto-kind')
-      const id = btn.getAttribute('data-goto-id')
-      if (!id) return
-      if (kind === 'stage') onGoToStage(id)
-      else if (kind === 'activity') onGoToActivity(id)
-    }
-    container.addEventListener('click', handleGotoClick)
-
-    sortedStages.forEach((stage) => {
-      const marker = new maplibregl.Marker({ element: makeStageMarkerEl(stage.order) })
-        .setLngLat([stage.coordinates.lng, stage.coordinates.lat])
-        .setPopup(new maplibregl.Popup({ offset: 18 }).setHTML(stagePopupHtml(stage)))
-        .addTo(map)
-      markersRef.current[stage.id] = marker
-
-      // Logements de la même étape situés ailleurs (ex: deux ryokans dans le
-      // même village) : un pin dédié pour pouvoir consulter leurs dates.
-      stage.accommodations
-        .filter(
-          (acc) =>
-            acc.coordinates &&
-            (acc.coordinates.lat !== stage.coordinates.lat || acc.coordinates.lng !== stage.coordinates.lng),
-        )
-        .forEach((acc) => {
-          new maplibregl.Marker({ element: makeAccommodationMarkerEl() })
-            .setLngLat([acc.coordinates!.lng, acc.coordinates!.lat])
-            .setPopup(
-              new maplibregl.Popup({ offset: 14 }).setHTML(
-                `<strong>${escapeHtml(stage.city)}</strong><div>${escapeHtml(acc.name)}<br>${formatDateRange(acc.checkIn, acc.checkOut)}</div><div class="popup-actions">${gotoStageButtonHtml(stage.id)}${navLinkHtml(acc.coordinates!)}</div>`,
-              ),
-            )
-            .addTo(map)
-        })
-
-      stage.excursions
-        .filter((ex) => ex.coordinates)
-        .forEach((ex) => {
-          new maplibregl.Marker({ element: makeExcursionMarkerEl() })
-            .setLngLat([ex.coordinates!.lng, ex.coordinates!.lat])
-            .setPopup(
-              new maplibregl.Popup({ offset: 12 }).setHTML(
-                `<strong>${escapeHtml(ex.name)}</strong><br>${new Date(ex.date).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'short',
-                })}${ex.notes ? `<br><em>${escapeHtml(ex.notes)}</em>` : ''}<div class="popup-actions">${gotoStageButtonHtml(stage.id)}${navLinkHtml(ex.coordinates!)}</div>`,
-              ),
-            )
-            .addTo(map)
-        })
-    })
-
-    const wishlistLabel = trip.wishlistStampLabel ?? DEFAULT_WISHLIST_STAMP_LABEL
-    ;(trip.activities ?? [])
-      .filter((activity) => activity.coordinates)
-      .forEach((activity) => {
-        const marker = new maplibregl.Marker({ element: makeActivityMarkerEl(activity.categories) })
-          .setLngLat([activity.coordinates!.lng, activity.coordinates!.lat])
-          .setPopup(new maplibregl.Popup({ offset: 10 }).setHTML(activityPopupHtml(activity, wishlistLabel)))
-          .addTo(map)
-        marker.getElement().style.display = 'none'
-        activityMarkerByIdRef.current[activity.id] = marker
-      })
-
-    map.on('load', () => {
-      // Les chemins/sentiers (highway=path) sont déjà présents dans les tuiles
-      // (couche transportation en ligne, roads hors ligne) mais peu visibles
-      // par défaut — on les fait ressortir pour repérer les sentiers de rando.
-      if (offline && offlineMapUri) {
-        map.addLayer({
-          id: 'hiking-paths',
-          type: 'line',
-          source: OFFLINE_SOURCE_NAME,
-          'source-layer': 'roads',
-          filter: ['==', 'kind', 'path'],
-          minzoom: 11,
-          paint: {
-            'line-color': TRAIL_COLOR[theme],
-            'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1, 16, 3],
-            'line-dasharray': [1.5, 0.75],
-          },
-        })
-      } else if (map.getLayer('highway-path')) {
-        map.setLayerZoomRange('highway-path', 11, 24)
-        map.setPaintProperty('highway-path', 'line-color', TRAIL_COLOR[theme])
-        map.setPaintProperty('highway-path', 'line-width', ['interpolate', ['linear'], ['zoom'], 11, 1, 16, 3])
-      }
-
-      if (selectedActivityId) {
-        const activity = (trip.activities ?? []).find((a) => a.id === selectedActivityId)
-        if (activity?.coordinates) {
-          map.jumpTo({ center: [activity.coordinates.lng, activity.coordinates.lat], zoom: 16 })
-          activityMarkerByIdRef.current[selectedActivityId]?.togglePopup()
-        }
-      } else if (selectedStageId) {
-        const stage = sortedStages.find((s) => s.id === selectedStageId)
-        if (stage) {
-          map.jumpTo({ center: [stage.coordinates.lng, stage.coordinates.lat], zoom: 11 })
-          markersRef.current[selectedStageId]?.togglePopup()
-        }
-      } else {
-        const bounds = new maplibregl.LngLatBounds()
-        sortedStages.forEach((stage) => bounds.extend([stage.coordinates.lng, stage.coordinates.lat]))
-        map.fitBounds(bounds, { padding: 40, duration: 0 })
-      }
-
-      const excursionLegs: TransportLeg[] = sortedStages.flatMap((stage) =>
-        stage.excursions
-          .filter((ex): ex is typeof ex & { mode: TransportMode; coordinates: NonNullable<typeof ex.coordinates> } =>
-            Boolean(ex.mode && ex.coordinates),
-          )
-          .map((ex) => ({
-            id: ex.id,
-            mode: ex.mode,
-            from: stage.city,
-            to: ex.name,
-            fromCoordinates: stage.coordinates,
-            toCoordinates: ex.coordinates,
-          })),
-      )
-      const legs = [
-        ...sortedStages.flatMap((stage) => stage.arrivalLegs ?? []),
-        ...excursionLegs,
-        ...(trip.departureLegs ?? []),
-      ]
-      Promise.all(legs.map((leg) => fetchLegCoordinates(leg))).then((coordsList) => {
-        const legsByMode: Record<TransportMode, [number, number][][]> = {
-          shinkansen: [],
-          train: [],
-          bus: [],
-          plane: [],
-          ferry: [],
-        }
-        legs.forEach((leg, i) => legsByMode[leg.mode].push(coordsList[i]))
-
-        ;(Object.keys(legsByMode) as TransportMode[]).forEach((mode) => {
-          const lines = legsByMode[mode]
-          if (lines.length === 0) return
-          const sourceId = `route-${mode}`
-          if (map.getSource(sourceId)) return
-          map.addSource(sourceId, {
-            type: 'geojson',
-            data: {
-              type: 'FeatureCollection',
-              features: lines.map((coordinates) => ({
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'LineString', coordinates },
-              })),
-            },
-          })
-          map.addLayer({
-            id: sourceId,
-            type: 'line',
-            source: sourceId,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: routeLineStyle(mode, theme),
-          })
-        })
-      })
-    })
 
     return () => {
       cancelLongPress()
       container.removeEventListener('click', handleGotoClick)
-      map.remove()
+      createdMap?.remove()
       mapRef.current = null
       markersRef.current = {}
       clickPopupRef.current = null
