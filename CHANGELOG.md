@@ -10,6 +10,9 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Corrigé
+- Afficheur d'erreurs JS (`index.html`) : les erreurs de chargement de ressources (event `error` sur une balise, « undefined:0:0 ») ne déclenchent plus le bandeau rouge — elles partent en console ; les vraies erreurs JS affichent désormais leur stack
+
 ## [1.1.0] - 2026-11-27
 
 ### Ajouté

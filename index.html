@@ -13,8 +13,10 @@
     <meta http-equiv="Expires" content="0" />
     <title>TripPlan</title>
     <script>
-      // Affiche les erreurs JS à l'écran au lieu d'une page blanche (debug,
-      // utile sur mobile où la console n'est pas accessible directement).
+      // Affiche les vraies erreurs JS à l'écran au lieu d'une page blanche (debug
+      // mobile, où la console n'est pas accessible). Les simples erreurs de
+      // chargement de ressources (event 'error' sur une balise, message vide,
+      // "undefined:0:0") partent en console sans bandeau : elles ne plantent pas l'app.
       function showJsError(label, detail) {
         var pre = document.createElement('pre')
         pre.style.cssText =
@@ -25,7 +27,22 @@
       window.addEventListener(
         'error',
         function (e) {
-          showJsError('Erreur JS', (e.message || String(e.error)) + '\n' + (e.filename || '') + ':' + (e.lineno || 0) + ':' + (e.colno || 0))
+          if (e.target && e.target !== window) {
+            console.error('Ressource en erreur:', e.target.src || e.target.href || e.target.currentSrc)
+            return
+          }
+          var err = e.error
+          showJsError(
+            'Erreur JS',
+            (e.message || String(err)) +
+              '\n' +
+              (e.filename || '') +
+              ':' +
+              (e.lineno || 0) +
+              ':' +
+              (e.colno || 0) +
+              (err && err.stack ? '\n' + err.stack : ''),
+          )
         },
         true,
       )

@@ -22,4 +22,10 @@ describe('service worker (anti page blanche)', () => {
     expect(main).toContain('serviceWorker.register')
     expect(main).toContain('import.meta.env.BASE_URL')
   })
+
+  it('l’afficheur d’erreurs JS ignore les erreurs de ressources (message vide)', () => {
+    const html = readFileSync('index.html', 'utf-8')
+    expect(html).toContain('e.target && e.target !== window')
+    expect(html).toContain('unhandledrejection')
+  })
 })
