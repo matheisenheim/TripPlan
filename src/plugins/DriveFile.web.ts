@@ -3,10 +3,9 @@ import type { DriveFilePickResult, DriveFilePlugin } from './DriveFile'
 import { getAccessToken } from '../services/googleAuth'
 import { openPicker } from '../services/googlePicker'
 
-// La carte hors-ligne (PMTiles) n'est pas encore prise en charge côté web —
-// contrairement à database.json (readText/writeText), elle nécessiterait un
-// vrai appel réseau HTTP Range par tuile plutôt qu'une simple lecture locale.
-const OFFLINE_MAP_UNAVAILABLE = "La carte hors-ligne n'est pas encore disponible sur navigateur."
+// La lecture par plages d'octets (readRange) n'a pas lieu d'être côté web : la
+// carte hors ligne y passe par un blob en mémoire (webMapFile.ts), pas par Drive.
+const OFFLINE_MAP_UNAVAILABLE = "readRange n'est pas supporté sur le web (voir webMapFile.ts)."
 
 export class DriveFileWeb extends WebPlugin implements DriveFilePlugin {
   async pickFile(): Promise<DriveFilePickResult> {
@@ -58,6 +57,8 @@ export class DriveFileWeb extends WebPlugin implements DriveFilePlugin {
   }
 
   closeRangeRead(): Promise<void> {
-    return Promise.reject(new Error(OFFLINE_MAP_UNAVAILABLE))
+    // No-op côté web : aucun descripteur de fichier à fermer (le blob PMTiles est
+    // géré par webMapFile.ts). MapView appelle closeRangeRead() au démontage.
+    return Promise.resolve()
   }
 }

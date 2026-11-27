@@ -10,11 +10,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "activities:build": "node scripts/build-activities.mjs",
-    "activities:geocode": "node scripts/geocode-activities.mjs",
-    "deploy": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1"
+    "activities:geocode": "node scripts/geocode-activities.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.3",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.4.3",
     "@capacitor/preferences": "^8.0.1",
@@ -26,7 +24,6 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.3",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

@@ -1,8 +1,8 @@
 # Japplan
 
-App perso (React + Capacitor) de suivi de voyages : carte interactive, planning par étape/par jour, liste d'activités. Principalement Android, mais aussi accessible depuis un navigateur (desktop, ou iOS) via une connexion Google Drive OAuth2.
+App perso (React + Vite, 100 % web) de suivi de voyages : carte interactive, planning par étape/par jour, liste d'activités. Accessible depuis un navigateur (desktop ou mobile) via une connexion Google Drive OAuth2, ou entièrement hors connexion grâce au stockage local du navigateur.
 
-Toutes les données de voyage vivent dans un fichier JSON unique sur Google Drive — rien n'est stocké dans ce dépôt. L'app détecte et fusionne automatiquement les changements concurrents entre les quelques personnes qui partagent un voyage. Voir [CLAUDE.md](CLAUDE.md) pour l'architecture complète.
+Toutes les données de voyage vivent dans un fichier JSON unique sur Google Drive — ou, en mode hors connexion, dans le localStorage du navigateur — rien n'est stocké dans ce dépôt. L'app détecte et fusionne automatiquement les changements concurrents entre les quelques personnes qui partagent un voyage sur Drive. Voir [CLAUDE.md](CLAUDE.md) pour l'architecture complète.
 
 ## Setup
 
@@ -31,7 +31,7 @@ Détails des pièges rencontrés (popups bloqués, port qui dérive, etc.) : voi
 
 ## Déploiement web (GitHub Pages)
 
-Le build web (accès depuis un navigateur desktop/iOS) est déployé sur GitHub Pages à chaque push sur `main`, via `.github/workflows/deploy-pages.yml` — `npm run build:pages` (mode `gh-pages`, base path `/japplan/`) puis publication du contenu de `dist/`.
+Le build web (accès depuis un navigateur desktop/iOS) est déployé sur GitHub Pages à chaque push sur `main`, via `.github/workflows/deploy-pages.yml` — `npm run build:pages` (mode `gh-pages`, base path `/TripPlan/`) puis publication du contenu de `dist/`.
 
 Prérequis, à faire une fois :
 
@@ -47,8 +47,6 @@ Tant que l'écran de consentement OAuth reste en statut **"Testing"**, seuls les
 npm run dev              # serveur de dev Vite
 npm run build             # tsc -b && vite build
 npm run lint               # oxlint
-npx cap sync android       # copie le build web dans le projet Android natif
-npm run deploy               # build web + sync + gradlew assembleDebug + install/lancement sur le téléphone connecté
 ```
 
-Détails complets (build Android, import CSV, carte hors-ligne...) : voir [CLAUDE.md](CLAUDE.md).
+Détails complets (import CSV, carte hors-ligne...) : voir [CLAUDE.md](CLAUDE.md).

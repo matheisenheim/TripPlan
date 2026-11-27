@@ -41,7 +41,7 @@ function loadGisScript(): Promise<void> {
 
 // Démarre le chargement dès l'import du module plutôt que d'attendre un
 // premier appel — voir la note en tête de fichier.
-void loadGisScript()
+void loadGisScript().catch(() => {})
 
 function clientId(): string {
   const id = import.meta.env.VITE_GOOGLE_CLIENT_ID

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Preferences } from '@capacitor/preferences'
 import { Capacitor } from '@capacitor/core'
 import { App as CapacitorApp } from '@capacitor/app'
-import type { Accommodation, Activity, Excursion, Resource, Stage, TransportLeg, Trip } from '../types/trip'
+import type { Accommodation, Activity, Database, Excursion, Resource, Stage, TransportLeg, Trip } from '../types/trip'
 import {
   AccessRevokedError,
   NoFileSelectedError,
@@ -17,6 +17,7 @@ import {
   type ConnectedFile,
 } from '../data/databaseRepository'
 import { uniqueId } from '../utils/activityId'
+import { loadLocalDatabase, saveLocalDatabase } from '../data/localDatabaseRepository'
 
 // Intervalle du polling léger de fraîcheur (voir l'effet plus bas) — vérification
 // de métadonnée seule, jamais de retéléchargement tant que rien n'a changé.
@@ -33,6 +34,9 @@ export interface UseDatabaseResult {
   status: DatabaseStatus
   error?: string
   fileName?: string
+  // true quand aucune source Drive n'est connectée : la base est lue/écrite
+  // dans le localStorage du navigateur (mode hors connexion).
+  localMode: boolean
   // Distinct de `error` (réservé au chargement) : une écriture ratée ne doit
   // plus faire passer `status` à 'error' et éjecter l'app entière (voir
   // persist ci-dessous) — elle se signale ici, affichée via le ⚙ du header.
@@ -96,6 +100,7 @@ export function useDatabase(): UseDatabaseResult {
   const [error, setError] = useState<string>()
   const [saveError, setSaveError] = useState<string>()
   const [fileName, setFileName] = useState<string>()
+  const [localMode, setLocalMode] = useState(false)
   const [recentlySynced, setRecentlySynced] = useState(false)
   const fileRef = useRef<ConnectedFile | null>(null)
   // Un seul écrivain Drive à la fois, qui écrit toujours le DERNIER état
@@ -118,6 +123,17 @@ export function useDatabase(): UseDatabaseResult {
   const baseVersionRef = useRef<string | null>(null)
   const appForegroundRef = useRef(true)
 
+  const applyLoadedDatabase = useCallback(async (database: Database, version: string | null) => {
+    setTrips(database.trips)
+    latestTripsRef.current = database.trips
+    baseVersionRef.current = version
+    pendingTransformsRef.current = []
+    const { value: storedId } = await Preferences.get({ key: SELECTED_TRIP_KEY })
+    setSelectedTripId(
+      storedId && database.trips.some((t) => t.id === storedId) ? storedId : (database.trips[0]?.id ?? null),
+    )
+  }, [])
+
   const refresh = useCallback(async () => {
     setStatus('loading')
     setError(undefined)
@@ -125,19 +141,25 @@ export function useDatabase(): UseDatabaseResult {
     try {
       const { database, file, version } = await loadDatabase()
       fileRef.current = file
+      setLocalMode(false)
       setFileName(file.name)
-      setTrips(database.trips)
-      latestTripsRef.current = database.trips
-      baseVersionRef.current = version
-      pendingTransformsRef.current = []
-      const { value: storedId } = await Preferences.get({ key: SELECTED_TRIP_KEY })
-      setSelectedTripId(
-        storedId && database.trips.some((t) => t.id === storedId) ? storedId : (database.trips[0]?.id ?? null),
-      )
+      await applyLoadedDatabase(database, version)
       setStatus('ready')
     } catch (e) {
       if (e instanceof NoFileSelectedError) {
-        setStatus('no-file')
+        // Aucun fichier Drive sélectionné : mode local hors connexion, la base
+        // est lue dans le localStorage du navigateur.
+        try {
+          const database = await loadLocalDatabase()
+          fileRef.current = null
+          setLocalMode(true)
+          setFileName(undefined)
+          await applyLoadedDatabase(database, null)
+          setStatus('ready')
+        } catch (localError) {
+          setError(localError instanceof Error ? localError.message : String(localError))
+          setStatus('error')
+        }
         return
       }
       if (e instanceof AccessRevokedError) {
@@ -153,7 +175,7 @@ export function useDatabase(): UseDatabaseResult {
       setError(e instanceof Error ? e.message : String(e))
       setStatus('error')
     }
-  }, [])
+  }, [applyLoadedDatabase])
 
   useEffect(() => {
     refresh()
@@ -167,7 +189,8 @@ export function useDatabase(): UseDatabaseResult {
   // runWriteLoop (rebase à l'écriture) qui gère la fraîcheur, pas ce polling — sinon
   // on risquerait d'écraser une modification locale pas encore écrite.
   useEffect(() => {
-    if (status !== 'ready') return
+    // En mode local (fileRef null), pas de polling : rien de distant à surveiller.
+    if (status !== 'ready' || !fileRef.current) return
 
     let cancelled = false
 
@@ -326,11 +349,24 @@ export function useDatabase(): UseDatabaseResult {
 
   const persist = useCallback(
     (transform: (current: Trip[]) => Trip[]): Promise<Trip[]> => {
-      const file = fileRef.current
-      if (!file) return Promise.reject(new Error('Aucun fichier connecté.'))
       const next = transform(latestTripsRef.current)
       setTrips(next)
       latestTripsRef.current = next
+      const file = fileRef.current
+      if (!file) {
+        // Mode local (hors connexion) : pas de source distante, pas de rebase —
+        // écriture directe dans le localStorage du navigateur.
+        return saveLocalDatabase({ trips: next }).then(
+          () => {
+            setSaveError(undefined)
+            return next
+          },
+          (e: unknown) => {
+            setSaveError(e instanceof Error ? e.message : String(e))
+            throw e
+          },
+        )
+      }
       pendingTransformsRef.current.push(transform)
       pendingWriteRef.current = true
       const loop = writeLoopRef.current ?? runWriteLoop(file)
@@ -346,7 +382,7 @@ export function useDatabase(): UseDatabaseResult {
   // nouvelle mutation — c'est le bouton "Réessayer" de SettingsModal.
   const retrySave = useCallback((): Promise<void> => {
     const file = fileRef.current
-    if (!file) return Promise.resolve()
+    if (!file) return saveLocalDatabase({ trips: latestTripsRef.current })
     if (writeLoopRef.current) return writeLoopRef.current
     pendingWriteRef.current = true
     return runWriteLoop(file)
@@ -652,6 +688,7 @@ export function useDatabase(): UseDatabaseResult {
     recentlySynced,
     retrySave,
     fileName,
+    localMode,
     connectFile,
     selectTrip,
     addTrip,

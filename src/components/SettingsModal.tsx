@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import type { DatabaseStatus } from '../hooks/useDatabase'
 import type { MapMode } from '../data/offlineMapRepository'
 import type { OfflineMapStatus } from '../hooks/useOfflineMap'
@@ -22,6 +23,7 @@ interface SettingsModalProps {
   databaseRecentlySynced?: boolean
   onRetrySave: () => Promise<void>
   databaseFileName?: string
+  databaseLocalMode?: boolean
   onConnectDatabaseFile: () => Promise<void>
   mapStatus: OfflineMapStatus
   mapError?: string
@@ -42,6 +44,7 @@ export default function SettingsModal({
   databaseRecentlySynced,
   onRetrySave,
   databaseFileName,
+  databaseLocalMode,
   onConnectDatabaseFile,
   mapStatus,
   mapError,
@@ -113,7 +116,8 @@ export default function SettingsModal({
         <h2>Base de voyages</h2>
 
         <p className="settings-status">
-          {databaseConnected && `Fichier connecté : ${databaseFileName}`}
+          {databaseConnected && databaseLocalMode && 'Mode local : base stockée dans ce navigateur (hors connexion)'}
+          {databaseConnected && !databaseLocalMode && `Fichier connecté : ${databaseFileName}`}
           {databaseConnected && databaseRecentlySynced && ' — mis à jour'}
           {databaseStatus === 'no-file' && !databaseError && 'Aucun fichier de voyages connecté.'}
           {databaseError}
@@ -121,8 +125,17 @@ export default function SettingsModal({
         </p>
 
         <Button variant="secondary" block onClick={onConnectDatabaseFile}>
-          {databaseConnected ? 'Changer le fichier' : 'Choisir le fichier Google Drive'}
+          {databaseLocalMode
+            ? 'Utiliser un fichier Google Drive…'
+            : databaseConnected
+              ? 'Changer le fichier'
+              : 'Choisir le fichier Google Drive'}
         </Button>
+        {databaseLocalMode && (
+          <p className="settings-hint">
+            Sans fichier Drive, tes données restent dans ce navigateur et l'app fonctionne hors connexion.
+          </p>
+        )}
 
         {databaseSaveError && (
           <>
@@ -171,13 +184,20 @@ export default function SettingsModal({
         </p>
 
         <Button variant="secondary" block onClick={onConnectMap}>
-          {mapConnected ? 'Changer le fichier' : 'Connecter la carte'}
+          {mapConnected ? 'Changer le fichier' : Capacitor.isNativePlatform() ? 'Connecter la carte' : 'Choisir un fichier .pmtiles…'}
         </Button>
 
-        <p className="settings-hint">
-          Pour que le mode hors ligne fonctionne vraiment sans réseau (avion, zone blanche), marque ce fichier{' '}
-          <strong>Disponible hors connexion</strong> dans l'app Google Drive elle-même.
-        </p>
+        {Capacitor.isNativePlatform() ? (
+          <p className="settings-hint">
+            Pour que le mode hors ligne fonctionne vraiment sans réseau (avion, zone blanche), marque ce fichier{' '}
+            <strong>Disponible hors connexion</strong> dans l'app Google Drive elle-même.
+          </p>
+        ) : (
+          <p className="settings-hint">
+            Sur navigateur, le fichier .pmtiles est copié dans ce navigateur (IndexedDB) : la carte hors ligne
+            fonctionne sans aucun réseau.
+          </p>
+        )}
       </section>
 
       <p className="settings-hint settings-version">Japplan v{__APP_VERSION__}</p>

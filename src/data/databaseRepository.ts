@@ -40,17 +40,9 @@ function isDatabase(value: unknown): value is Database {
   return !!value && typeof value === 'object' && isTripArray((value as Partial<Database>).trips)
 }
 
-async function readDatabaseContent(file: ConnectedFile): Promise<{ database: Database; migrated: boolean }> {
-  const { granted } = await DriveFile.hasPersistedAccess({ uri: file.uri })
-  if (!granted) throw new AccessRevokedError()
-
-  let content: string
-  try {
-    ;({ content } = await DriveFile.readText({ uri: file.uri }))
-  } catch (e) {
-    throw new ReadError(e instanceof Error ? e.message : String(e))
-  }
-
+// Valide + migre un contenu JSON brut de base — commun au fichier Drive et au
+// stockage local du navigateur (voir localDatabaseRepository.ts).
+export function parseDatabaseContent(content: string): { database: Database; migrated: boolean } {
   if (content.trim().length === 0) {
     return { database: { trips: [] }, migrated: false }
   }
@@ -82,6 +74,20 @@ async function readDatabaseContent(file: ConnectedFile): Promise<{ database: Dat
   // mémoire, donc ça garantit que toute donnée manipulée par l'app est toujours
   // à la forme courante, peu importe le point d'entrée qui l'a récupérée.
   return migrateDatabase(parsed)
+}
+
+async function readDatabaseContent(file: ConnectedFile): Promise<{ database: Database; migrated: boolean }> {
+  const { granted } = await DriveFile.hasPersistedAccess({ uri: file.uri })
+  if (!granted) throw new AccessRevokedError()
+
+  let content: string
+  try {
+    ;({ content } = await DriveFile.readText({ uri: file.uri }))
+  } catch (e) {
+    throw new ReadError(e instanceof Error ? e.message : String(e))
+  }
+
+  return parseDatabaseContent(content)
 }
 
 // Relit le contenu distant sans retoucher aux Preferences — utilisé par le rebase

@@ -37,10 +37,10 @@ function copyMaplibreWorker(): Plugin {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), copyMaplibreWorker()],
-  // Capacitor's WebView serves dist/ from its own root, so the default build needs
-  // root-relative paths ('/'). GitHub Pages serves this repo under /japplan/, so only
-  // the dedicated 'gh-pages' mode (npm run build:pages) switches the base path.
-  base: mode === 'gh-pages' ? '/japplan/' : '/',
+  // En local (dev/build/preview), les chemins restent relatifs à la racine ('/').
+  // GitHub Pages sert ce dépôt sous /TripPlan/, donc seul le mode 'gh-pages'
+  // (npm run build:pages) change le base path.
+  base: mode === 'gh-pages' ? '/TripPlan/' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
   },
