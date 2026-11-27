@@ -24,6 +24,7 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 ### Corrigé
 - Carte d'activité : le wishlist est retirable (chip « envie de faire » cliquable quand déjà marqué) ; modifier/supprimer restent accessibles par le swipe vers la gauche
 - Carte : clic sur une activité proposée sans coordonnées → la carte se centre sur l'étape associée ; les propositions sont géocodées best-effort à l'ajout (en ligne)
+- Carte d'activité : sans lien Google Maps renseigné, l'icône + le texte « En Maps » ne sont plus affichés (au lieu d'un lien vide)
 
 - Afficheur d'erreurs JS (`index.html`) : les erreurs de chargement de ressources (event `error` sur une balise, « undefined:0:0 ») s'affichent en bandeau discret avec l'URL (« Ressource introuvable : … ») ; les vraies erreurs JS gardent le bandeau rouge avec stack
 - `index.html` : indicateur « Chargement de TripPlan… » tant que le JS n'a pas démarré (retiré par `main.tsx` au montage) — permet de distinguer page blanche « HTML servi mais JS bloqué » vs « rien ne répond »

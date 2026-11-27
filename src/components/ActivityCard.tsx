@@ -230,7 +230,7 @@ export default function ActivityCard({
       {!compact && activity.notes && <p className="activity-card__notes">{renderNotes(activity.notes)}</p>}
       {!compact && activity.comment && <p className="activity-card__comment">💬 {activity.comment}</p>}
       <div className="activity-card__footer">
-        {!compact && (
+        {!compact && activity.mapsUrl && (
           <a className="btn btn--link" href={activity.mapsUrl} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()}>
             <Icon name="external" size={14} />
             En Maps

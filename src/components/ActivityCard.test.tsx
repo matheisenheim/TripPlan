@@ -35,3 +35,31 @@ describe('ActivityCard — wishlist retirable + actions visibles', () => {
   })
 
 })
+
+describe('ActivityCard — lien En Maps', () => {
+  it('sans lien Google Maps : aucune icône ni texte « En Maps » affiché', () => {
+    render(<ActivityCard activity={baseActivity} />)
+    expect(screen.queryByText('En Maps')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /En Maps/i })).not.toBeInTheDocument()
+  })
+
+  it('avec un lien Google Maps : le lien « En Maps » est affiché avec le bon href', () => {
+    render(
+      <ActivityCard
+        activity={{ ...baseActivity, mapsUrl: 'https://maps.google.com/?q=Edinburgh+Castle' }}
+      />,
+    )
+    const link = screen.getByRole('link', { name: /En Maps/i })
+    expect(link).toHaveAttribute('href', 'https://maps.google.com/?q=Edinburgh+Castle')
+  })
+
+  it('mode compact : jamais de lien « En Maps » même avec un mapsUrl', () => {
+    render(
+      <ActivityCard
+        activity={{ ...baseActivity, mapsUrl: 'https://maps.google.com/?q=Edinburgh+Castle' }}
+        compact
+      />,
+    )
+    expect(screen.queryByRole('link', { name: /En Maps/i })).not.toBeInTheDocument()
+  })
+})
