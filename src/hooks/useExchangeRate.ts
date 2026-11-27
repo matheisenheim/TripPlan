@@ -1,67 +1,74 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Preferences } from '@capacitor/preferences'
 
-const CACHE_KEY = 'exchangeRateEurJpy'
+const CACHE_KEY = 'exchangeRatesV2'
 
-export interface ExchangeRate {
-  /** Nombre de yens pour 1 €. */
-  rate: number
-  /** Date du taux publiée par la source (ISO `YYYY-MM-DD`). */
+export type Currency = 'EUR' | 'JPY' | 'USD' | 'GBP'
+export type FiatCurrency = Exclude<Currency, 'EUR'>
+export const FIAT_CURRENCIES: FiatCurrency[] = ['JPY', 'USD', 'GBP']
+export const ALL_CURRENCIES: Currency[] = ['EUR', ...FIAT_CURRENCIES]
+
+export interface ExchangeRates {
+  /** Nombre d'unités de la devise pour 1 €. */
+  rates: Record<FiatCurrency, number>
+  /** Date du taux publié par la source (ISO `YYYY-MM-DD`). */
   date: string
   source: 'BCE' | 'ExchangeRate-API'
 }
 
 export type ExchangeRateStatus = 'loading' | 'ready' | 'offline' | 'error'
 
-// Frankfurter publie le taux de référence BCE (mis à jour chaque jour ouvré
+// Frankfurter publie les taux de référence BCE (mis à jour chaque jour ouvré
 // vers 16h CET). open.er-api.com sert de repli si Frankfurter est indisponible.
 // Aucune des deux n'exige de clé API et toutes deux autorisent le CORS.
-async function fetchRate(): Promise<ExchangeRate> {
+async function fetchRates(): Promise<ExchangeRates> {
   try {
-    const res = await fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=JPY')
+    const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=EUR&symbols=${FIAT_CURRENCIES.join(',')}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = (await res.json()) as { date: string; rates: { JPY?: number } }
-    if (typeof json.rates.JPY !== 'number') throw new Error('JPY absent')
-    return { rate: json.rates.JPY, date: json.date, source: 'BCE' }
+    const json = (await res.json()) as { date: string; rates: Partial<Record<FiatCurrency, number>> }
+    const rates = Object.fromEntries(FIAT_CURRENCIES.map((c) => [c, json.rates[c]])) as Record<FiatCurrency, number>
+    if (FIAT_CURRENCIES.some((c) => typeof rates[c] !== 'number')) throw new Error('taux manquants')
+    return { rates, date: json.date, source: 'BCE' }
   } catch {
     const res = await fetch('https://open.er-api.com/v6/latest/EUR')
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = (await res.json()) as { time_last_update_unix: number; rates: { JPY?: number } }
-    if (typeof json.rates.JPY !== 'number') throw new Error('JPY absent')
+    const json = (await res.json()) as { time_last_update_unix: number; rates: Partial<Record<FiatCurrency, number>> }
+    const rates = Object.fromEntries(FIAT_CURRENCIES.map((c) => [c, json.rates[c]])) as Record<FiatCurrency, number>
+    if (FIAT_CURRENCIES.some((c) => typeof rates[c] !== 'number')) throw new Error('taux manquants')
     const date = new Date(json.time_last_update_unix * 1000).toISOString().slice(0, 10)
-    return { rate: json.rates.JPY, date, source: 'ExchangeRate-API' }
+    return { rates, date, source: 'ExchangeRate-API' }
   }
 }
 
-async function readCache(): Promise<ExchangeRate | null> {
+async function readCache(): Promise<ExchangeRates | null> {
   const { value } = await Preferences.get({ key: CACHE_KEY })
   if (!value) return null
   try {
-    return JSON.parse(value) as ExchangeRate
+    return JSON.parse(value) as ExchangeRates
   } catch {
     return null
   }
 }
 
 /**
- * Taux EUR→JPY du jour. Le dernier taux obtenu est mis en cache pour rester
- * utilisable sans réseau (cas typique en voyage) — le statut `'offline'` signale
- * alors qu'on affiche un taux potentiellement ancien.
+ * Taux de change pour 1 € (JPY, USD, GBP). Le dernier taux obtenu est mis en
+ * cache pour rester utilisable sans réseau (cas typique en voyage) — le
+ * statut `'offline'` signale alors qu'on affiche un taux potentiellement ancien.
  */
 export function useExchangeRate() {
-  const [rate, setRate] = useState<ExchangeRate | null>(null)
+  const [rates, setRates] = useState<ExchangeRates | null>(null)
   const [status, setStatus] = useState<ExchangeRateStatus>('loading')
 
   const refresh = useCallback(async () => {
     setStatus('loading')
     try {
-      const fresh = await fetchRate()
-      setRate(fresh)
+      const fresh = await fetchRates()
+      setRates(fresh)
       setStatus('ready')
       await Preferences.set({ key: CACHE_KEY, value: JSON.stringify(fresh) })
     } catch {
       const cached = await readCache()
-      setRate((current) => current ?? cached)
+      setRates((current) => current ?? cached)
       setStatus(cached ? 'offline' : 'error')
     }
   }, [])
@@ -70,7 +77,7 @@ export function useExchangeRate() {
     let cancelled = false
     // Affiche immédiatement le taux en cache pendant que le réseau répond.
     readCache().then((cached) => {
-      if (!cancelled && cached) setRate((current) => current ?? cached)
+      if (!cancelled && cached) setRates((current) => current ?? cached)
     })
     refresh()
     return () => {
@@ -78,5 +85,5 @@ export function useExchangeRate() {
     }
   }, [refresh])
 
-  return { rate, status, refresh }
+  return { rates, status, refresh }
 }

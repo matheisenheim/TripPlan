@@ -1404,6 +1404,15 @@
   color: var(--vermillon);
 }
 
+select.converter__currency {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  max-width: 5.5em;
+}
+
 .converter__field input {
   flex: 1;
   min-width: 0;
@@ -1418,7 +1427,24 @@
 }
 
 .converter__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  padding: var(--sp-1);
   color: var(--ink-300);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+
+.converter__arrow:hover:not(:disabled) {
+  color: var(--vermillon);
+}
+
+.converter__arrow:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .converter__footer {
