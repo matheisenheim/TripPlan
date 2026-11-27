@@ -2,6 +2,10 @@ import { useMemo, useState } from 'react'
 import type { Trip } from '../types/trip'
 import { ACTIVITY_SUGGESTIONS, type ActivitySuggestion } from '../data/activitySuggestions'
 import { categoryLabels } from '../theme/categories'
+import { haversineKm } from '../utils/geo'
+
+// Rayon autour de la ville choisie pour les propositions.
+export const SUGGESTIONS_RADIUS_KM = 20
 import Sheet from './ui/Sheet'
 import Button from './ui/Button'
 import Chip from './ui/Chip'
@@ -18,8 +22,22 @@ interface SuggestionsModalProps {
 export default function SuggestionsModal({ trip, onAddSuggestion, onClose }: SuggestionsModalProps) {
   const [city, setCity] = useState('')
   const cities = useMemo(() => [...new Set(trip.stages.map((s) => s.city))], [trip.stages])
+  const stageByCity = useMemo(() => new Map(trip.stages.map((s) => [s.city, s])), [trip.stages])
 
-  const visible = ACTIVITY_SUGGESTIONS.filter((s) => !city || s.city === city)
+  // Filtre par ville : suggestions à moins de SUGGESTIONS_RADIUS_KM de l'étape
+  // (quand les deux ont des coordonnées) ; les suggestions sans coordonnées ne
+  // passent que si leur ville correspond exactement. Sans ville choisie : tout.
+  const visible = useMemo(() => {
+    const stage = city ? stageByCity.get(city) : undefined
+    return ACTIVITY_SUGGESTIONS.filter((s) => {
+      if (!city) return true
+      if (!stage?.coordinates || !s.coordinates) return s.city === city
+      return haversineKm(stage.coordinates, s.coordinates) <= SUGGESTIONS_RADIUS_KM
+    }).map((s) => ({
+      s,
+      km: stage?.coordinates && s.coordinates ? haversineKm(stage.coordinates, s.coordinates) : undefined,
+    }))
+  }, [city, stageByCity])
 
   return (
     <Sheet
@@ -32,7 +50,7 @@ export default function SuggestionsModal({ trip, onAddSuggestion, onClose }: Sug
         </Button>
       }
     >
-      <Field label="Ville">
+      <Field label={`Ville (rayon de ${SUGGESTIONS_RADIUS_KM} km autour de l'étape)`}>
         <select value={city} onChange={(e) => setCity(e.target.value)}>
           <option value="">Toutes les villes du catalogue</option>
           {cities.map((c) => (
@@ -50,12 +68,13 @@ export default function SuggestionsModal({ trip, onAddSuggestion, onClose }: Sug
         </p>
       ) : (
         <ul className="calendar-events__list">
-          {visible.map((s, i) => (
+          {visible.map(({ s, km }, i) => (
             <li key={`${s.city}-${s.name}-${i}`} className="calendar-events__item">
               <div className="calendar-events__text">
                 <strong>{s.name}</strong>
                 <span className="calendar-events__meta">
                   {s.city}
+                  {km !== undefined ? ` · à ${km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`}` : ''}
                   {s.notes ? ` · ${s.notes}` : ''}
                 </span>
               </div>

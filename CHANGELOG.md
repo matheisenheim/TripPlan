@@ -14,7 +14,7 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - Export / import de la base de voyages en JSON depuis les paramètres (⚙ → Base de voyages) : en mode local la base vit dans le navigateur, donc vider les données du site la fait disparaître — exporter régulièrement pour garder une sauvegarde
 - Connexion Google Drive simplifiée : coller le lien ou l'ID du fichier dans ⚙ (« Connecter ce fichier », `utils/driveLink.ts`) — seul `VITE_GOOGLE_CLIENT_ID` est requis ; le Picker (clé API + n° de projet) devient optionnel
 - Onglet Activités : bouton « Événements » listant les événements **Google Calendar** d'une date choisie, filtrable par ville (étapes du voyage), chaque événement ajoutable en activité planifiée (date + heure) d'un clic. Scope `calendar` (lecture+écriture) à la place de `calendar.readonly` — à ré-autoriser à la prochaine connexion Google
-- Onglet Activités : bouton « ✨ Propositions » — catalogue d'activités embarquées (`src/data/activitySuggestions.ts`, éditable), filtrable par ville, ajoutables au voyage en un clic
+- Onglet Activités : bouton « ✨ Propositions » — catalogue d'activités embarquées (`src/data/activitySuggestions.ts`, éditable), filtrable par ville avec un **rayon de 20 km** autour de l'étape choisie (haversine, `src/utils/geo.ts`), ajoutables au voyage en un clic
 - Bouton « Ajouter à Google Agenda » sur les activités planifiées (crée l'événement dans le calendrier principal ; la carte passe alors à « Agenda ✓ » pour pouvoir le retirer). Nouveau champ `Activity.calendarEventId` ; scope OAuth passé à `calendar` (lecture + écriture) — à ré-autoriser à la prochaine connexion Google
 
 ### Modifié
