@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
 import { DriveFile } from '../plugins/DriveFile'
+import { loadWebMapFile, pickWebMapFile } from './webMapFile'
 
 const URI_KEY = 'offlineMapUri'
 const NAME_KEY = 'offlineMapName'
@@ -26,6 +27,14 @@ export async function getStoredMapFile(): Promise<ConnectedMapFile | null> {
 }
 
 export async function loadMapFile(): Promise<ConnectedMapFile> {
+  // Sur navigateur, la carte hors ligne est un .pmtiles stocké localement en
+  // IndexedDB (pseudo-URI webmap://) — voir webMapFile.ts.
+  if (!Capacitor.isNativePlatform()) {
+    const file = await loadWebMapFile()
+    if (!file) throw new NoFileSelectedError()
+    return file
+  }
+
   const file = await getStoredMapFile()
   if (!file) throw new NoFileSelectedError()
 
@@ -36,11 +45,10 @@ export async function loadMapFile(): Promise<ConnectedMapFile> {
 }
 
 export async function connectMapFile(): Promise<ConnectedMapFile> {
-  // La lecture par plage d'octets (readRange) n'est pas encore implémentée côté web
-  // (voir DriveFile.web.ts) — inutile de laisser sélectionner un fichier qu'on ne
-  // pourra jamais lire une fois en mode hors-ligne.
+  // Sur navigateur : sélecteur de fichier local, le .pmtiles est copié en IndexedDB
+  // et lu en mémoire (aucun readRange Drive, qui n'existe pas côté web).
   if (!Capacitor.isNativePlatform()) {
-    throw new Error("La carte hors-ligne n'est pas encore disponible sur navigateur.")
+    return pickWebMapFile()
   }
   const { uri, name } = await DriveFile.pickFile()
   await Promise.all([Preferences.set({ key: URI_KEY, value: uri }), Preferences.set({ key: NAME_KEY, value: name })])

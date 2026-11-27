@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import type { DatabaseStatus } from '../hooks/useDatabase'
 import type { MapMode } from '../data/offlineMapRepository'
 import type { OfflineMapStatus } from '../hooks/useOfflineMap'
@@ -183,13 +184,20 @@ export default function SettingsModal({
         </p>
 
         <Button variant="secondary" block onClick={onConnectMap}>
-          {mapConnected ? 'Changer le fichier' : 'Connecter la carte'}
+          {mapConnected ? 'Changer le fichier' : Capacitor.isNativePlatform() ? 'Connecter la carte' : 'Choisir un fichier .pmtiles…'}
         </Button>
 
-        <p className="settings-hint">
-          Pour que le mode hors ligne fonctionne vraiment sans réseau (avion, zone blanche), marque ce fichier{' '}
-          <strong>Disponible hors connexion</strong> dans l'app Google Drive elle-même.
-        </p>
+        {Capacitor.isNativePlatform() ? (
+          <p className="settings-hint">
+            Pour que le mode hors ligne fonctionne vraiment sans réseau (avion, zone blanche), marque ce fichier{' '}
+            <strong>Disponible hors connexion</strong> dans l'app Google Drive elle-même.
+          </p>
+        ) : (
+          <p className="settings-hint">
+            Sur navigateur, le fichier .pmtiles est copié dans ce navigateur (IndexedDB) : la carte hors ligne
+            fonctionne sans aucun réseau.
+          </p>
+        )}
       </section>
 
       <p className="settings-hint settings-version">Japplan v{__APP_VERSION__}</p>
