@@ -179,7 +179,7 @@ export default function Timeline({
         <div className="spine__rail" />
         <div className="stage-card stage-card--departure">
           <div className="stage-card__header">
-            <h2>Trajet</h2>
+            <h2>Trajet retour</h2>
           </div>
           {(trip.departureLegs ?? []).map((leg) => (
             <div className="stage-card__row" key={leg.id}>
@@ -207,7 +207,7 @@ export default function Timeline({
             </div>
           ))}
           <Button variant="ghost" size="sm" icon="plus" onClick={() => setDepartureLegModal({ mode: 'create' })}>
-            Trajet
+            Trajet retour
           </Button>
         </div>
       </li>
@@ -270,7 +270,7 @@ export default function Timeline({
         <TransportLegFormModal
           mode={departureLegModal.mode}
           leg={departureLegModal.mode === 'edit' ? departureLegModal.leg : undefined}
-          title={departureLegModal.mode === 'create' ? 'Ajouter un trajet' : 'Modifier le trajet'}
+          title={departureLegModal.mode === 'create' ? 'Ajouter un trajet retour' : 'Modifier le trajet retour'}
           onSubmit={(input) =>
             departureLegModal.mode === 'create'
               ? onAddDepartureLeg(input)

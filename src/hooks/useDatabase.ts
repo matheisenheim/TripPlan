@@ -609,7 +609,7 @@ export function useDatabase(): UseDatabaseResult {
       await updateTripInList(tripId, (trip) => {
         const remaining = (trip.departureLegs ?? []).filter((l) => l.id !== legId)
         // `undefined` plutôt que `[]` une fois vide : dayPlan.ts/DayCard.tsx
-        // traitent un `departureLegs` défini comme "il y a un trajet final".
+        // traitent un `departureLegs` défini comme "il y a un trajet retour".
         return { ...trip, departureLegs: remaining.length > 0 ? remaining : undefined }
       })
     },

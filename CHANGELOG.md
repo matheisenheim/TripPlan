@@ -19,9 +19,6 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - `index.html` : meta no-cache pour éviter qu'un HTML trop vieux (servi en cache par GitHub Pages) ne référence des assets hashés supprimés au déploiement suivant (cause de page blanche)
 - Service worker (`public/sw.js`, enregistré en production) : navigations en network-first avec repli cache — un `index.html` périmé en cache navigateur est revalidé sur le réseau à chaque ouverture, ce qui élimine les pages blanches après un déploiement ; les assets hashés restent en cache-first ; l'app reste utilisable hors ligne après la première visite
 - Convertisseur de devises (onglet Ressources) : USD ($) et GBP (£) ajoutés à côté d'EUR et JPY — sélecteurs de devise de départ/arrivée, bouton pour inverser, taux croisés depuis les taux BCE pour 1 € (cache hors ligne conservé)
-
-### Modifié
-- Planning : la section « Trajet retour » (dernier trajet après la dernière étape) est renommée « Trajet »
 - Choix du lieu affiché par défaut sur la carte à la création d'un voyage (champ « Lieu affiché par défaut sur la carte » du formulaire « Nouveau voyage ») : remplace le repli en dur centré sur le Japon
 
 ### Corrigé
