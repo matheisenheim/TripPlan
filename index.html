@@ -28,7 +28,15 @@
         'error',
         function (e) {
           if (e.target && e.target !== window) {
-            console.error('Ressource en erreur:', e.target.src || e.target.href || e.target.currentSrc)
+            // Ressource (script/img/link) qui n'a pas chargé : bandeau discret en
+            // bas avec l'URL — utile pour diagnostiquer un asset 404 (cache HTML périmé).
+            var url = e.target.src || e.target.href || e.target.currentSrc || '(inconnu)'
+            var bar = document.createElement('pre')
+            bar.style.cssText =
+              'position:fixed;left:0;right:0;bottom:0;z-index:9999;margin:0;background:#ffe9a8;color:#7a5b00;padding:0.4em 0.8em;font:11px/1.3 monospace;white-space:pre-wrap'
+            bar.textContent = 'Ressource introuvable : ' + url
+            document.body.appendChild(bar)
+            console.error('Ressource en erreur:', url)
             return
           }
           var err = e.error
@@ -54,6 +62,8 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Visible tant que le JS n'a pas démarré ; retiré par main.tsx au montage. -->
+    <p id="boot-hint" style="font: 14px sans-serif; color: #666; padding: 1em">Chargement de TripPlan…</p>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

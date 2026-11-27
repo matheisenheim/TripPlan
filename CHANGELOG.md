@@ -11,7 +11,8 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Corrigé
-- Afficheur d'erreurs JS (`index.html`) : les erreurs de chargement de ressources (event `error` sur une balise, « undefined:0:0 ») ne déclenchent plus le bandeau rouge — elles partent en console ; les vraies erreurs JS affichent désormais leur stack
+- Afficheur d'erreurs JS (`index.html`) : les erreurs de chargement de ressources (event `error` sur une balise, « undefined:0:0 ») s'affichent en bandeau discret avec l'URL (« Ressource introuvable : … ») ; les vraies erreurs JS gardent le bandeau rouge avec stack
+- `index.html` : indicateur « Chargement de TripPlan… » tant que le JS n'a pas démarré (retiré par `main.tsx` au montage) — permet de distinguer page blanche « HTML servi mais JS bloqué » vs « rien ne répond »
 
 ## [1.1.0] - 2026-11-27
 

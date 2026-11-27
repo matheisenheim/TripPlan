@@ -23,9 +23,12 @@ describe('service worker (anti page blanche)', () => {
     expect(main).toContain('import.meta.env.BASE_URL')
   })
 
-  it('l’afficheur d’erreurs JS ignore les erreurs de ressources (message vide)', () => {
+  it('diagnostics de démarrage : boot-hint dans le HTML, retiré au montage, ressources listées', () => {
     const html = readFileSync('index.html', 'utf-8')
-    expect(html).toContain('e.target && e.target !== window')
+    expect(html).toContain('id="boot-hint"')
+    expect(html).toContain('Ressource introuvable')
     expect(html).toContain('unhandledrejection')
+    const main = readFileSync('src/main.tsx', 'utf-8')
+    expect(main).toContain("getElementById('boot-hint')?.remove()")
   })
 })

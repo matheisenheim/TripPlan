@@ -10,6 +10,9 @@ createRoot(document.getElementById('root')!).render(
   </ErrorBoundary>,
 )
 
+// L'app a démarré : retire l'indicateur de chargement présent dans le HTML statique.
+document.getElementById('boot-hint')?.remove()
+
 // Service worker (production uniquement) : les navigations passent d'abord par
 // le réseau pour ne jamais servir un index.html périmé en cache (page blanche
 // après un déploiement GitHub Pages), avec repli sur le cache hors ligne.
