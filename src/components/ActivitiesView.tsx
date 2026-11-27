@@ -5,6 +5,8 @@ import { buildDayPlans } from '../utils/dayPlan'
 import { categoryLabels, ALL_CATEGORIES } from '../theme/categories'
 import ActivityCard from './ActivityCard'
 import ActivityFormModal from './ActivityFormModal'
+import CalendarEventsModal from './CalendarEventsModal'
+import type { CalendarEvent } from '../services/googleCalendar'
 import ActivityRatingModal from './ActivityRatingModal'
 import DayPickerModal from './DayPickerModal'
 import TimePickerModal from './TimePickerModal'
@@ -49,6 +51,7 @@ export default function ActivitiesView({
   const [search, setSearch] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [modal, setModal] = useState<ModalState>(null)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [schedulingActivity, setSchedulingActivity] = useState<Activity | null>(null)
   const [ratingActivity, setRatingActivity] = useState<Activity | null>(null)
   const [timeActivity, setTimeActivity] = useState<Activity | null>(null)
@@ -172,6 +175,20 @@ export default function ActivitiesView({
     }
   }
 
+  function handleAddCalendarEvent(ev: CalendarEvent, city: string, day: string) {
+    const stage = trip.stages.find((st) => st.city === city)
+    void onAddActivity({
+      name: ev.title,
+      stageGroup: city || 'Événements',
+      stageId: stage?.id,
+      categories: ['point_of_interest'],
+      mapsUrl: ev.link ?? '',
+      date: day,
+      time: ev.time !== 'Journée' ? ev.time : undefined,
+      notes: ev.location,
+    })
+  }
+
   return (
     <div className="activities">
       {(activitiesStatus === 'no-file' || activitiesStatus === 'error') && (
@@ -196,6 +213,9 @@ export default function ActivitiesView({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <Button variant="ghost" icon="calendar" onClick={() => setCalendarOpen(true)}>
+          Événements
+        </Button>
         <Button
           variant={filtersOpen ? 'secondary' : 'ghost'}
           icon="filter"
@@ -330,6 +350,9 @@ export default function ActivitiesView({
           onSelect={(patch) => onUpdateActivity(timeActivity.id, patch)}
           onClose={() => setTimeActivity(null)}
         />
+      )}
+      {calendarOpen && (
+        <CalendarEventsModal trip={trip} onAddEvent={handleAddCalendarEvent} onClose={() => setCalendarOpen(false)} />
       )}
     </div>
   )

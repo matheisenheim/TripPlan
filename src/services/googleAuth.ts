@@ -17,7 +17,9 @@
 // geste utilisateur pour le popup interactif suivant.
 
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
-const SCOPE = 'https://www.googleapis.com/auth/drive.file'
+// drive.file : lire/écrire le fichier de voyages. calendar.readonly : lister
+// les événements d'une date (bouton « Événements » de l'onglet Activités).
+const SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly'
 const EXPIRY_MARGIN_MS = 60_000
 
 let scriptPromise: Promise<void> | null = null

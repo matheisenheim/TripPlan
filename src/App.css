@@ -182,6 +182,45 @@
   margin-top: var(--sp-2);
 }
 
+.calendar-events__controls {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-end;
+}
+
+.calendar-events__controls .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.calendar-events__list {
+  list-style: none;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-events__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.calendar-events__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-events__meta {
+  font-size: var(--fs-xs);
+  color: var(--ink-500);
+}
+
 .tab-bar {
   flex-shrink: 0;
   display: flex;

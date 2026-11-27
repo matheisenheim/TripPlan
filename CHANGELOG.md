@@ -13,6 +13,7 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 ### Ajouté
 - Export / import de la base de voyages en JSON depuis les paramètres (⚙ → Base de voyages) : en mode local la base vit dans le navigateur, donc vider les données du site la fait disparaître — exporter régulièrement pour garder une sauvegarde
 - Connexion Google Drive simplifiée : coller le lien ou l'ID du fichier dans ⚙ (« Connecter ce fichier », `utils/driveLink.ts`) — seul `VITE_GOOGLE_CLIENT_ID` est requis ; le Picker (clé API + n° de projet) devient optionnel
+- Onglet Activités : bouton « Événements » listant les événements **Google Calendar** d'une date choisie, filtrable par ville (étapes du voyage), chaque événement ajoutable en activité planifiée (date + heure) d'un clic. Scope `calendar.readonly` ajouté à l'OAuth (à ré-autoriser à la prochaine connexion Google)
 
 ### Modifié
 - Numéro de version automatique à chaque déploiement : `major.minor.<nb de commits>` (ex. 1.1.33) via `scripts/version.mjs` injecté dans `__APP_VERSION__` — plus de bump manuel de package.json ; `fetch-depth: 0` en CI pour l'historique complet
