@@ -10,6 +10,8 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [1.1.0] - 2026-11-27
+
 ### Ajouté
 - Mode local hors connexion : sans fichier Google Drive connecté, la base de voyages est lue et écrite dans le localStorage du navigateur
 - Carte hors ligne (PMTiles) sur le web : le fichier `.pmtiles` est choisi via le sélecteur local, stocké en IndexedDB et servi en mémoire — la carte fonctionne sans aucun réseau
