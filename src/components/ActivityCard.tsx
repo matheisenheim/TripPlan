@@ -24,6 +24,7 @@ interface ActivityCardProps {
   onRate?: (activity: Activity) => void
   onToggleWishlist?: (activity: Activity) => void
   onSetTime?: (activity: Activity) => void
+  onToggleCalendar?: (activity: Activity) => void
   focused?: boolean
   wishlistLabel?: string
   /** Rendu réduit pour la frise horaire (DayAgenda) — masque horaires/notes/commentaire. */
@@ -62,6 +63,7 @@ export default function ActivityCard({
   onRate,
   onToggleWishlist,
   onSetTime,
+  onToggleCalendar,
   focused,
   wishlistLabel = DEFAULT_WISHLIST_STAMP_LABEL,
   compact = false,
@@ -234,7 +236,7 @@ export default function ActivityCard({
             En Maps
           </a>
         )}
-        {(onToggleWishlist || onSchedule || onSetTime || onRate || onUnassign) && (
+        {(onToggleWishlist || onSchedule || onSetTime || onRate || onUnassign || onToggleCalendar) && (
           <div className="activity-card__actions">
             {!compact && onToggleWishlist && !activity.wishlist && (
               <Button
@@ -271,6 +273,34 @@ export default function ActivityCard({
                   onClick={(e) => {
                     e.stopPropagation()
                     onSchedule(activity)
+                  }}
+                />
+              ))}
+            {onToggleCalendar && activity.date && !compact &&
+              (activity.calendarEventId ? (
+                <Chip
+                  as="button"
+                  tone="matcha"
+                  active
+                  icon="check"
+                  aria-label="Retirer de Google Agenda"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleCalendar(activity)
+                  }}
+                >
+                  Agenda
+                </Chip>
+              ) : (
+                <Button
+                  iconOnly
+                  variant="ghost"
+                  size="sm"
+                  icon="external"
+                  aria-label="Ajouter à Google Agenda"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleCalendar(activity)
                   }}
                 />
               ))}

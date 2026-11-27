@@ -21,6 +21,7 @@ export type IconName =
   | 'clock'
   | 'refresh'
   | 'swap'
+  | 'sparkles'
 
 // Contenu interne de chaque icône (sans le <svg> englobant) — partagé entre
 // <Icon> (React) et iconHtml() (chaîne, pour les popups MapLibre construits
@@ -52,6 +53,8 @@ export const ICON_INNER: Record<IconName, string> = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   swap: '<path d="M4 8h15l-4-4"/><path d="M20 16H5l4 4"/>',
+  sparkles:
+    '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/>',
 }
 
 /** Icône rendue en chaîne HTML — pour les popups MapLibre (template strings, MapView.tsx). */

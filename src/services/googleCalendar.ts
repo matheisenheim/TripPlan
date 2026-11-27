@@ -43,6 +43,69 @@ export function eventMatchesCity(location: string | undefined, city: string): bo
   return norm(location ?? '').includes(norm(city))
 }
 
+export interface NewCalendarEvent {
+  title: string
+  date: string // YYYY-MM-DD
+  time?: string // HH:mm — sans heure, l'événement est en "toute la journée"
+  endTime?: string
+  location?: string
+  description?: string
+  link?: string
+}
+
+function addHour(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const d = new Date(2000, 0, 1, h, m)
+  d.setHours(d.getHours() + 1)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function nextDay(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+// Construit le body de l'API Calendar (fonction pure, testée).
+export function buildEventBody(input: NewCalendarEvent): Record<string, unknown> {
+  const body: Record<string, unknown> = { summary: input.title }
+  if (input.time) {
+    body.start = { dateTime: `${input.date}T${input.time}:00` }
+    body.end = { dateTime: `${input.date}T${input.endTime ?? addHour(input.time)}:00` }
+  } else {
+    body.start = { date: input.date }
+    body.end = { date: nextDay(input.date) }
+  }
+  if (input.location) body.location = input.location
+  const desc = [input.description, input.link].filter(Boolean).join('\n')
+  if (desc) body.description = desc
+  return body
+}
+
+// Crée un événement dans le calendrier principal ; retourne son ID.
+export async function createCalendarEvent(input: NewCalendarEvent): Promise<string> {
+  const token = await getAccessToken({ interactive: true })
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildEventBody(input)),
+  })
+  if (!res.ok) throw new Error(`Création de l'événement échouée (${res.status}).`)
+  const json = (await res.json()) as { id?: string }
+  if (!json.id) throw new Error('Réponse Calendar sans id.')
+  return json.id
+}
+
+// Supprime un événement du calendrier principal (404 = déjà supprimé, OK).
+export async function deleteCalendarEvent(eventId: string): Promise<void> {
+  const token = await getAccessToken({ interactive: true })
+  const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok && res.status !== 404) throw new Error(`Suppression de l'événement échouée (${res.status}).`)
+}
+
 // Événements du calendrier principal pour un jour donné (UTC).
 export async function listEventsForDay(dayISO: string): Promise<CalendarEvent[]> {
   const token = await getAccessToken({ interactive: true })

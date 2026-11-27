@@ -6,7 +6,9 @@ import { categoryLabels, ALL_CATEGORIES } from '../theme/categories'
 import ActivityCard from './ActivityCard'
 import ActivityFormModal from './ActivityFormModal'
 import CalendarEventsModal from './CalendarEventsModal'
-import type { CalendarEvent } from '../services/googleCalendar'
+import SuggestionsModal from './SuggestionsModal'
+import { createCalendarEvent, deleteCalendarEvent, type CalendarEvent } from '../services/googleCalendar'
+import type { ActivitySuggestion } from '../data/activitySuggestions'
 import ActivityRatingModal from './ActivityRatingModal'
 import DayPickerModal from './DayPickerModal'
 import TimePickerModal from './TimePickerModal'
@@ -52,6 +54,7 @@ export default function ActivitiesView({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [modal, setModal] = useState<ModalState>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const [schedulingActivity, setSchedulingActivity] = useState<Activity | null>(null)
   const [ratingActivity, setRatingActivity] = useState<Activity | null>(null)
   const [timeActivity, setTimeActivity] = useState<Activity | null>(null)
@@ -175,6 +178,40 @@ export default function ActivitiesView({
     }
   }
 
+  function handleAddSuggestion(s: ActivitySuggestion) {
+    const stage = trip.stages.find((st) => st.city === s.city)
+    void onAddActivity({
+      name: s.name,
+      stageGroup: s.city,
+      stageId: stage?.id,
+      categories: [s.category],
+      mapsUrl: s.mapsUrl ?? '',
+      notes: s.notes,
+      coordinates: s.coordinates,
+    })
+  }
+
+  async function handleToggleCalendar(activity: Activity) {
+    try {
+      if (activity.calendarEventId) {
+        await deleteCalendarEvent(activity.calendarEventId)
+        await onUpdateActivity(activity.id, { calendarEventId: undefined })
+      } else if (activity.date) {
+        const id = await createCalendarEvent({
+          title: activity.name,
+          date: activity.date,
+          time: activity.time,
+          endTime: activity.endTime,
+          location: activity.notes,
+          link: activity.mapsUrl || undefined,
+        })
+        await onUpdateActivity(activity.id, { calendarEventId: id })
+      }
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
   function handleAddCalendarEvent(ev: CalendarEvent, city: string, day: string) {
     const stage = trip.stages.find((st) => st.city === city)
     void onAddActivity({
@@ -213,6 +250,9 @@ export default function ActivitiesView({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <Button variant="ghost" icon="sparkles" onClick={() => setSuggestionsOpen(true)}>
+          Propositions
+        </Button>
         <Button variant="ghost" icon="calendar" onClick={() => setCalendarOpen(true)}>
           Événements
         </Button>
@@ -299,6 +339,7 @@ export default function ActivitiesView({
                 onRate={(a) => setRatingActivity(a)}
                 onToggleWishlist={handleToggleWishlist}
                 onSetTime={(a) => setTimeActivity(a)}
+                onToggleCalendar={handleToggleCalendar}
                 wishlistLabel={trip.wishlistStampLabel}
                 focused={activity.id === focusActivityId}
               />
@@ -353,6 +394,10 @@ export default function ActivitiesView({
       )}
       {calendarOpen && (
         <CalendarEventsModal trip={trip} onAddEvent={handleAddCalendarEvent} onClose={() => setCalendarOpen(false)} />
+      )}
+
+      {suggestionsOpen && (
+        <SuggestionsModal trip={trip} onAddSuggestion={handleAddSuggestion} onClose={() => setSuggestionsOpen(false)} />
       )}
     </div>
   )

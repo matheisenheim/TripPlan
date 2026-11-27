@@ -46,6 +46,9 @@ export interface Activity {
   // Absente si non géocodée (Nominatim côté release, ou non renseignée en app) —
   // l'activité reste utilisable, juste sans pin carte.
   coordinates?: Coordinates
+  // ID de l'événement créé dans Google Agenda depuis cette activité (bouton
+  // agenda de la carte) — champ in-app uniquement, jamais touché par le CSV.
+  calendarEventId?: string
   done?: boolean // cochée une fois faite sur place
   rating?: string // emoji choisi librement (clavier emoji du téléphone), ressenti perso une fois faite
   comment?: string // commentaire perso, distinct de `notes` (issu des sources CSV)
