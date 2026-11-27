@@ -18,6 +18,7 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
   const [showPasteFallback, setShowPasteFallback] = useState(false)
   const [pastedUrl, setPastedUrl] = useState('')
   const [pasteError, setPasteError] = useState<string>()
+  const [pickedName, setPickedName] = useState<string>()
 
   useEffect(() => {
     if (query.trim().length < 3) {
@@ -49,8 +50,14 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
 
   function selectResult(result: NominatimResult) {
     onChange(String(result.lat), String(result.lng))
+    setPickedName(result.displayName)
     setQuery('')
     setResults([])
+  }
+
+  function clearPicked() {
+    onChange('', '')
+    setPickedName(undefined)
   }
 
   function handlePaste(value: string) {
@@ -58,6 +65,7 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
     const parsed = parseLocationInput(value)
     if (parsed) {
       onChange(String(parsed.lat), String(parsed.lng))
+      setPickedName(undefined)
       setPasteError(undefined)
     } else if (!value.trim()) {
       setPasteError(undefined)
@@ -88,10 +96,18 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
           ))}
         </ul>
       )}
+      {pickedName && (
+        <p className="coordinates-field__hint">
+          Lieu choisi : {pickedName}{' '}
+          <Button variant="link" size="sm" onClick={clearPicked}>
+            Effacer
+          </Button>
+        </p>
+      )}
 
       {!showPasteFallback ? (
         <Button variant="link" size="sm" onClick={() => setShowPasteFallback(true)}>
-          Lieu introuvable ? Coller des coordonnées ou un lien Maps
+          Saisir les coordonnées manuellement (coller un lien Maps ou « lat, lng »)
         </Button>
       ) : (
         <Field label="Coordonnées copiées, ou lien Maps déjà ouvert (avec le pin centré)">
@@ -100,14 +116,16 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
       )}
       {pasteError && <p className="coordinates-field__hint coordinates-field__hint--error">{pasteError}</p>}
 
-      <div className="field-row">
-        <Field label="Latitude">
-          <input type="text" inputMode="decimal" value={lat} onChange={(e) => onChange(e.target.value, lng)} />
-        </Field>
-        <Field label="Longitude">
-          <input type="text" inputMode="decimal" value={lng} onChange={(e) => onChange(lat, e.target.value)} />
-        </Field>
-      </div>
+      {!pickedName && (
+        <div className="field-row">
+          <Field label="Latitude">
+            <input type="text" inputMode="decimal" value={lat} onChange={(e) => onChange(e.target.value, lng)} />
+          </Field>
+          <Field label="Longitude">
+            <input type="text" inputMode="decimal" value={lng} onChange={(e) => onChange(lat, e.target.value)} />
+          </Field>
+        </div>
+      )}
     </div>
   )
 }

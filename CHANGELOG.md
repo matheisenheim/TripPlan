@@ -16,6 +16,9 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - Bouton « Vue par défaut » dans l'onglet Carte : enregistre le centre et le zoom actuels comme vue de démarrage de la carte
 - Choix du lieu affiché par défaut sur la carte à la création d'un voyage (champ « Lieu affiché par défaut sur la carte » du formulaire « Nouveau voyage ») : remplace le repli en dur centré sur le Japon
 
+### Corrigé
+- Champ coordonnées : les champs Latitude/Longitude ne s'affichent plus une fois un lieu choisi dans les résultats de recherche (le lieu choisi est affiché, avec un bouton « Effacer ») ; le lien « Lieu introuvable ? » est renommé « Saisir les coordonnées manuellement » pour ne plus ressembler à un message d'erreur
+
 ### Modifié
 - Projet renommé Japplan → TripPlan (titre de l'onglet, nom du package, README, page de confidentialité, pied des paramètres)
 - Base path du déploiement GitHub Pages ajusté à `/TripPlan/`
