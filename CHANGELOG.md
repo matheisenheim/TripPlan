@@ -12,6 +12,7 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ### Ajouté
 - Export / import de la base de voyages en JSON depuis les paramètres (⚙ → Base de voyages) : en mode local la base vit dans le navigateur, donc vider les données du site la fait disparaître — exporter régulièrement pour garder une sauvegarde
+- PWA installable : `manifest.webmanifest` + icônes PNG (192/512/maskable/180, générées par `npm run icons`) + service worker existant → Chrome mobile propose « Installer l'application » ; le SW met en cache toutes les ressources same-origin (manifest, icônes inclus)
 
 ### Corrigé
 - Afficheur d'erreurs JS (`index.html`) : les erreurs de chargement de ressources (event `error` sur une balise, « undefined:0:0 ») s'affichent en bandeau discret avec l'URL (« Ressource introuvable : … ») ; les vraies erreurs JS gardent le bandeau rouge avec stack

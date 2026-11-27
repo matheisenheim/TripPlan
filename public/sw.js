@@ -43,8 +43,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Assets buildés (hashés dans le nom de fichier) : cache-first, puis réseau.
-  if (url.pathname.includes('/assets/')) {
+  // Toute autre ressource same-origin en GET (assets hashés, manifest,
+  // icônes, favicon…) : cache-first, puis réseau.
+  if (request.method === 'GET') {
     event.respondWith(
       caches.match(request).then(
         (cached) =>

@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "icons": "node scripts/gen-icons.mjs",
     "preview": "vite preview",
     "activities:build": "node scripts/build-activities.mjs",
     "activities:geocode": "node scripts/geocode-activities.mjs"
