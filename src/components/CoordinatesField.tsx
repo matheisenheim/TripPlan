@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { isUnresolvableMapsLink, parseLocationInput, searchPlaces, type NominatimResult } from '../utils/nominatimSearch'
 import Field from './ui/Field'
 import Button from './ui/Button'
+import MapPickerModal from './MapPickerModal'
 
 interface CoordinatesFieldProps {
   legend: string
@@ -19,6 +20,7 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
   const [pastedUrl, setPastedUrl] = useState('')
   const [pasteError, setPasteError] = useState<string>()
   const [pickedName, setPickedName] = useState<string>()
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   useEffect(() => {
     if (query.trim().length < 3) {
@@ -105,6 +107,9 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
         </p>
       )}
 
+      <Button variant="link" size="sm" onClick={() => setPickerOpen(true)}>
+        Choisir sur la carte
+      </Button>
       {!showPasteFallback ? (
         <Button variant="link" size="sm" onClick={() => setShowPasteFallback(true)}>
           Saisir les coordonnées manuellement (coller un lien Maps ou « lat, lng »)
@@ -125,6 +130,16 @@ export default function CoordinatesField({ legend, lat, lng, onChange }: Coordin
             <input type="text" inputMode="decimal" value={lng} onChange={(e) => onChange(lat, e.target.value)} />
           </Field>
         </div>
+      )}
+      {pickerOpen && (
+        <MapPickerModal
+          onPick={(coords, name) => {
+            onChange(String(coords.lat), String(coords.lng))
+            setPickedName(name ?? `Point sur la carte (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`)
+            setPickerOpen(false)
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
       )}
     </div>
   )

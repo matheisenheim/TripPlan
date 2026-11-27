@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { setWorkerUrl } from 'maplibre-gl'
-import { Protocol, PMTiles } from 'pmtiles'
-import { layers as protomapsLayers, namedFlavor } from '@protomaps/basemaps'
+import { PMTiles } from 'pmtiles'
+import { MAP_STYLES, OFFLINE_SOURCE_NAME, buildOfflineStyle, pmtilesProtocol } from '../utils/mapStyle'
 import { DEFAULT_WISHLIST_STAMP_LABEL, type Trip, type Stage, type TransportLeg, type TransportMode, type Coordinates, type Activity, type ActivityCategory } from '../types/trip'
 import { ALL_CATEGORIES, TRANSPORT_COLORS, TRAIL_COLOR, type ResolvedTheme } from '../theme/categories'
 import MapFilterModal from './MapFilterModal'
-import { OfflinePmtilesSource, OFFLINE_PMTILES_KEY } from '../utils/offlinePmtilesSource'
+import { OfflinePmtilesSource } from '../utils/offlinePmtilesSource'
 import { getDefaultMapCamera, saveDefaultMapCamera, type MapCamera } from '../data/mapViewPreferences'
 import { DriveFile } from '../plugins/DriveFile'
 import { getCachedRoute, setCachedRoute } from '../utils/routeCache'
@@ -26,11 +26,6 @@ import Chip from './ui/Chip'
 // unhashed, at the copied location).
 setWorkerUrl(`${import.meta.env.BASE_URL}maplibre-worker/maplibre-gl-worker.mjs`)
 
-// Registered once globally, like setWorkerUrl above — see "Carte hors ligne"
-// in CLAUDE.md. The actual PMTiles instance (tied to whichever Drive URI is
-// connected) is (re)added to this protocol at mount time, below.
-const pmtilesProtocol = new Protocol()
-maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile)
 
 interface MapViewProps {
   trip: Trip
@@ -43,15 +38,6 @@ interface MapViewProps {
   onGoToActivity: (activityId: string) => void
 }
 
-// OpenFreeMap ne propose pas de style sombre (catalogue : bright, positron,
-// liberty) — positron (gris désaturé) est le moins agressif à côté du chrome
-// sumi. Hors ligne, @protomaps/basemaps a un vrai flavor "dark" (voir
-// buildOfflineStyle) : l'asymétrie clair/sombre en ligne vs hors ligne est
-// une limite connue de OpenFreeMap, pas un oubli.
-const MAP_STYLES: Record<ResolvedTheme, string> = {
-  light: 'https://tiles.openfreemap.org/styles/bright',
-  dark: 'https://tiles.openfreemap.org/styles/positron',
-}
 
 function formatDateRange(checkIn: string, checkOut: string) {
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
@@ -197,25 +183,6 @@ function routeLineStyle(mode: TransportMode, theme: ResolvedTheme): maplibregl.L
   }
 }
 
-// Construit depuis le schéma Protomaps, pas l'OpenMapTiles utilisé en ligne
-// par OpenFreeMap/Bright — l'archive PMTiles hors ligne est extraite du
-// basemap Protomaps (voir CLAUDE.md "Carte hors ligne"), dont les noms de
-// couches vecteur ne correspondent pas à OpenMapTiles.
-const OFFLINE_SOURCE_NAME = 'protomaps'
-function buildOfflineStyle(theme: ResolvedTheme): maplibregl.StyleSpecification {
-  return {
-    version: 8,
-    glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
-    sprite: `https://protomaps.github.io/basemaps-assets/sprites/v4/${theme}`,
-    sources: {
-      [OFFLINE_SOURCE_NAME]: {
-        type: 'vector',
-        url: `pmtiles://${OFFLINE_PMTILES_KEY}`,
-      },
-    },
-    layers: protomapsLayers(OFFLINE_SOURCE_NAME, namedFlavor(theme)),
-  }
-}
 
 export default function MapView({
   trip,

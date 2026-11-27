@@ -22,6 +22,20 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
   return data.map((d) => ({ displayName: d.display_name, lat: Number(d.lat), lng: Number(d.lon) }))
 }
 
+// Reverse geocoding best-effort : nom du lieu pour un pin posé sur la carte.
+// Échoue hors connexion — l'appelant retombe alors sur un nom générique.
+export async function reverseGeocode(lat: number, lng: number, signal?: AbortSignal): Promise<string | null> {
+  const url = new URL('https://nominatim.openstreetmap.org/reverse')
+  url.searchParams.set('format', 'json')
+  url.searchParams.set('lat', String(lat))
+  url.searchParams.set('lon', String(lng))
+  url.searchParams.set('zoom', '14')
+  const res = await fetch(url, { signal })
+  if (!res.ok) throw new Error('Reverse geocoding indisponible.')
+  const data = (await res.json()) as { display_name?: string }
+  return data.display_name ?? null
+}
+
 // "!3d<lat>!4d<lng>" is the place's own pin coordinates embedded in a full Maps URL's data blob —
 // more reliable than "@lat,lng" below, which is just the map viewport center and can drift from the pin.
 const DATA_COORDS_RE = /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/

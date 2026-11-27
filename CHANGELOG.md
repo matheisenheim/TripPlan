@@ -14,6 +14,7 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - Mode local hors connexion : sans fichier Google Drive connecté, la base de voyages est lue et écrite dans le localStorage du navigateur
 - Carte hors ligne (PMTiles) sur le web : le fichier `.pmtiles` est choisi via le sélecteur local, stocké en IndexedDB et servi en mémoire — la carte fonctionne sans aucun réseau
 - Bouton « Vue par défaut » dans l'onglet Carte : enregistre le centre et le zoom actuels comme vue de démarrage de la carte
+- Sélection d'un lieu directement sur la carte (pin au tap) depuis le champ coordonnées (« Choisir sur la carte ») — fonctionne hors connexion : carte PMTiles si connectée, style en ligne sinon, fond neutre au pire ; le nom du lieu (reverse geocoding) n'est renseigné qu'avec internet
 - Choix du lieu affiché par défaut sur la carte à la création d'un voyage (champ « Lieu affiché par défaut sur la carte » du formulaire « Nouveau voyage ») : remplace le repli en dur centré sur le Japon
 
 ### Corrigé
