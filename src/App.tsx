@@ -51,6 +51,7 @@ function App() {
     saveError: databaseSaveError,
     recentlySynced: databaseRecentlySynced,
     fileName: databaseFileName,
+    localMode: databaseLocalMode,
   } = db
 
   const {
@@ -311,6 +312,7 @@ function App() {
           databaseRecentlySynced={databaseRecentlySynced}
           onRetrySave={db.retrySave}
           databaseFileName={databaseFileName}
+          databaseLocalMode={databaseLocalMode}
           onConnectDatabaseFile={db.connectFile}
           mapStatus={offlineMapStatus}
           mapError={offlineMapError}

@@ -22,6 +22,7 @@ interface SettingsModalProps {
   databaseRecentlySynced?: boolean
   onRetrySave: () => Promise<void>
   databaseFileName?: string
+  databaseLocalMode?: boolean
   onConnectDatabaseFile: () => Promise<void>
   mapStatus: OfflineMapStatus
   mapError?: string
@@ -42,6 +43,7 @@ export default function SettingsModal({
   databaseRecentlySynced,
   onRetrySave,
   databaseFileName,
+  databaseLocalMode,
   onConnectDatabaseFile,
   mapStatus,
   mapError,
@@ -113,7 +115,8 @@ export default function SettingsModal({
         <h2>Base de voyages</h2>
 
         <p className="settings-status">
-          {databaseConnected && `Fichier connecté : ${databaseFileName}`}
+          {databaseConnected && databaseLocalMode && 'Mode local : base stockée dans ce navigateur (hors connexion)'}
+          {databaseConnected && !databaseLocalMode && `Fichier connecté : ${databaseFileName}`}
           {databaseConnected && databaseRecentlySynced && ' — mis à jour'}
           {databaseStatus === 'no-file' && !databaseError && 'Aucun fichier de voyages connecté.'}
           {databaseError}
@@ -121,8 +124,17 @@ export default function SettingsModal({
         </p>
 
         <Button variant="secondary" block onClick={onConnectDatabaseFile}>
-          {databaseConnected ? 'Changer le fichier' : 'Choisir le fichier Google Drive'}
+          {databaseLocalMode
+            ? 'Utiliser un fichier Google Drive…'
+            : databaseConnected
+              ? 'Changer le fichier'
+              : 'Choisir le fichier Google Drive'}
         </Button>
+        {databaseLocalMode && (
+          <p className="settings-hint">
+            Sans fichier Drive, tes données restent dans ce navigateur et l'app fonctionne hors connexion.
+          </p>
+        )}
 
         {databaseSaveError && (
           <>
