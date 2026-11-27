@@ -1,14 +1,16 @@
 import { defineConfig, type Plugin } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import { copyFileSync, mkdirSync, readFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 
-const { version: appVersion } = JSON.parse(readFileSync(path.join(rootDir, 'package.json'), 'utf-8')) as {
-  version: string
-}
+// Version de build automatique : major.minor de package.json + nombre de
+// commits (scripts/version.mjs) — chaque déploiement a son propre numéro,
+// plus de bump manuel.
+const appVersion = execSync('node scripts/version.mjs', { cwd: rootDir }).toString().trim()
 
 // maplibre-gl 6's worker bundle (maplibre-gl-worker.mjs) imports a sibling
 // maplibre-gl-shared.mjs via a relative path hardcoded inside the compiled
