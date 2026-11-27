@@ -12,6 +12,28 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>TripPlan</title>
+    <script>
+      // Affiche les erreurs JS à l'écran au lieu d'une page blanche (debug,
+      // utile sur mobile où la console n'est pas accessible directement).
+      function showJsError(label, detail) {
+        var pre = document.createElement('pre')
+        pre.style.cssText =
+          'position:fixed;inset:0;z-index:9999;margin:0;background:#fff;color:#c00;padding:1em;overflow:auto;font:12px/1.4 monospace;white-space:pre-wrap'
+        pre.textContent = label + ': ' + detail
+        document.body.appendChild(pre)
+      }
+      window.addEventListener(
+        'error',
+        function (e) {
+          showJsError('Erreur JS', (e.message || String(e.error)) + '\n' + (e.filename || '') + ':' + (e.lineno || 0) + ':' + (e.colno || 0))
+        },
+        true,
+      )
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e.reason
+        showJsError('Rejection', String((r && (r.stack || r.message)) || r))
+      })
+    </script>
   </head>
   <body>
     <div id="root"></div>

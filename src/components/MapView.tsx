@@ -207,6 +207,7 @@ export default function MapView({
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const [defaultCamera, setDefaultCamera] = useState<MapCamera | null>(null)
   const [viewSaved, setViewSaved] = useState(false)
+  const [mapError, setMapError] = useState<string>()
 
   useEffect(() => {
     getDefaultMapCamera().then(setDefaultCamera)
@@ -222,16 +223,24 @@ export default function MapView({
       pmtilesProtocol.add(new PMTiles(new OfflinePmtilesSource(offlineMapUri)))
     }
 
-    const map = new maplibregl.Map({
-      container,
-      style: offline && offlineMapUri ? buildOfflineStyle(theme) : MAP_STYLES[theme],
-      center: [defaultCamera.lng, defaultCamera.lat],
-      zoom: defaultCamera.zoom,
-      // Replié en icône (i) plutôt que masqué : l'attribution OpenStreetMap/
-      // OpenFreeMap reste requise par leur licence, juste moins envahissante.
-      attributionControl: { compact: true },
-    })
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    let map: maplibregl.Map
+    try {
+      map = new maplibregl.Map({
+        container,
+        style: offline && offlineMapUri ? buildOfflineStyle(theme) : MAP_STYLES[theme],
+        center: [defaultCamera.lng, defaultCamera.lat],
+        zoom: defaultCamera.zoom,
+        // Replié en icône (i) plutôt que masqué : l'attribution OpenStreetMap/
+        // OpenFreeMap reste requise par leur licence, juste moins envahissante.
+        attributionControl: { compact: true },
+      })
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    } catch (e) {
+      // WebGL indisponible, worker bloqué, etc. Sans cette garde, l'erreur levée
+      // dans un useEffect ferait démontager tout l'arbre par React 19 → page blanche.
+      setMapError(e instanceof Error ? e.message : String(e))
+      return
+    }
     mapRef.current = map
 
     // MapLibre fails a source/tile fetch by firing 'error' without ever throwing or
@@ -484,7 +493,7 @@ export default function MapView({
     // selectedActivityId/offline/offlineMapUri/theme at mount time are the
     // only values that matter here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultCamera])
+  }, [defaultCamera, mapError])
 
   useEffect(() => {
     // "Envie de faire" et "Planifiées" sont des filtres rapides indépendants des
@@ -547,6 +556,23 @@ export default function MapView({
     await saveDefaultMapCamera({ lng: center.lng, lat: center.lat, zoom: map.getZoom() })
     setViewSaved(true)
     window.setTimeout(() => setViewSaved(false), 2000)
+  }
+
+  if (mapError) {
+    return (
+      <div className="map-wrapper">
+        <div className="map-fallback">
+          <p>
+            <strong>Carte indisponible sur cet appareil.</strong>
+          </p>
+          <p className="map-fallback__error">{mapError}</p>
+          <p>Les onglets Planning, Activités et Ressources restent utilisables.</p>
+          <Button variant="secondary" onClick={() => setMapError(undefined)}>
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
