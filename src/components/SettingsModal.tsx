@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { parseDriveFileId } from '../utils/driveLink'
 import type { DatabaseStatus } from '../hooks/useDatabase'
 import type { MapMode } from '../data/offlineMapRepository'
 import type { OfflineMapStatus } from '../hooks/useOfflineMap'
@@ -7,6 +8,7 @@ import type { ThemePref } from '../theme/theme'
 import type { ResolvedTheme } from '../theme/categories'
 import Sheet from './ui/Sheet'
 import Button from './ui/Button'
+import Field from './ui/Field'
 import Icon from './ui/Icon'
 
 interface SettingsModalProps {
@@ -25,6 +27,7 @@ interface SettingsModalProps {
   databaseFileName?: string
   databaseLocalMode?: boolean
   onConnectDatabaseFile: () => Promise<void>
+  onConnectDatabaseFileId: (fileId: string) => Promise<void>
   onExportDatabase: () => void
   onImportDatabaseFile: (file: File) => void
   mapStatus: OfflineMapStatus
@@ -48,6 +51,7 @@ export default function SettingsModal({
   databaseFileName,
   databaseLocalMode,
   onConnectDatabaseFile,
+  onConnectDatabaseFileId,
   onExportDatabase,
   onImportDatabaseFile,
   mapStatus,
@@ -62,6 +66,27 @@ export default function SettingsModal({
   const mapConnected = mapStatus === 'ready'
   const [retrying, setRetrying] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const [driveInput, setDriveInput] = useState('')
+  const [driveConnecting, setDriveConnecting] = useState(false)
+  const [driveError, setDriveError] = useState<string>()
+
+  async function handleConnectById() {
+    const id = parseDriveFileId(driveInput)
+    if (!id) {
+      setDriveError('Lien ou ID Drive invalide — colle un lien drive.google.com ou l’ID du fichier.')
+      return
+    }
+    setDriveError(undefined)
+    setDriveConnecting(true)
+    try {
+      await onConnectDatabaseFileId(id)
+      setDriveInput('')
+    } catch (e) {
+      setDriveError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDriveConnecting(false)
+    }
+  }
 
   async function handleRetrySave() {
     setRetrying(true)
@@ -129,13 +154,34 @@ export default function SettingsModal({
           {databaseStatus === 'loading' && 'Chargement…'}
         </p>
 
+        <Field label="Lien ou ID du fichier Drive">
+          <input
+            type="text"
+            value={driveInput}
+            onChange={(e) => setDriveInput(e.target.value)}
+            placeholder="https://drive.google.com/file/d/…  ou  ID du fichier"
+          />
+        </Field>
+        {driveError && (
+          <p className="sheet__error" role="alert">
+            <Icon name="alert" size={16} />
+            {driveError}
+          </p>
+        )}
+        <Button variant="primary" block onClick={handleConnectById} loading={driveConnecting} loadingLabel="Connexion…">
+          Connecter ce fichier
+        </Button>
         <Button variant="secondary" block onClick={onConnectDatabaseFile}>
           {databaseLocalMode
-            ? 'Utiliser un fichier Google Drive…'
+            ? '…ou choisir dans Google Drive'
             : databaseConnected
-              ? 'Changer le fichier'
-              : 'Choisir le fichier Google Drive'}
+              ? 'Changer de fichier (Picker)'
+              : '…ou choisir dans Google Drive'}
         </Button>
+        <p className="settings-hint">
+          Le lien/ID suffit : un seul réglage Google requis (l'ID client OAuth). Le Picker « choisir dans Drive »
+          demande en plus la clé API Picker et le n° de projet.
+        </p>
         {databaseLocalMode && (
           <p className="settings-hint">
             Sans fichier Drive, tes données restent dans ce navigateur et l'app fonctionne hors connexion.

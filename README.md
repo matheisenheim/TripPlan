@@ -13,6 +13,8 @@ npm run dev
 
 ## Connexion Google Drive (accès navigateur)
 
+**Connexion rapide** : dans l'app, ⚙ → colle le **lien ou l'ID du fichier Drive** → « Connecter ce fichier ». Un seul réglage Google est alors requis : `VITE_GOOGLE_CLIENT_ID` (étape 4 ci-dessous). Le Picker « choisir dans Drive » (étapes 5-6 : clé API + n° de projet) est optionnel.
+
 Le build web a besoin d'un projet Google Cloud pour s'authentifier et accéder au fichier de voyages sur Drive.
 
 1. [console.cloud.google.com](https://console.cloud.google.com) → créer/sélectionner un projet.

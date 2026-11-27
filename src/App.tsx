@@ -336,6 +336,7 @@ function App() {
           databaseFileName={databaseFileName}
           databaseLocalMode={databaseLocalMode}
           onConnectDatabaseFile={db.connectFile}
+          onConnectDatabaseFileId={db.connectFileWithId}
           onExportDatabase={handleExportDatabase}
           onImportDatabaseFile={handleImportDatabaseFile}
           mapStatus={offlineMapStatus}

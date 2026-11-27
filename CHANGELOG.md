@@ -12,6 +12,10 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ### Ajouté
 - Export / import de la base de voyages en JSON depuis les paramètres (⚙ → Base de voyages) : en mode local la base vit dans le navigateur, donc vider les données du site la fait disparaître — exporter régulièrement pour garder une sauvegarde
+- Connexion Google Drive simplifiée : coller le lien ou l'ID du fichier dans ⚙ (« Connecter ce fichier », `utils/driveLink.ts`) — seul `VITE_GOOGLE_CLIENT_ID` est requis ; le Picker (clé API + n° de projet) devient optionnel
+
+### Modifié
+- Numéro de version automatique à chaque déploiement : `major.minor.<nb de commits>` (ex. 1.1.33) via `scripts/version.mjs` injecté dans `__APP_VERSION__` — plus de bump manuel de package.json ; `fetch-depth: 0` en CI pour l'historique complet
 - PWA installable : `manifest.webmanifest` + icônes PNG (192/512/maskable/180, générées par `npm run icons`) + service worker existant → Chrome mobile propose « Installer l'application » ; le SW met en cache toutes les ressources same-origin (manifest, icônes inclus)
 
 ### Corrigé

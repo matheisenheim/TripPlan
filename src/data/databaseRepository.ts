@@ -135,3 +135,11 @@ export async function connectFile(): Promise<ConnectedFile> {
   await Promise.all([Preferences.set({ key: URI_KEY, value: uri }), Preferences.set({ key: NAME_KEY, value: name })])
   return { uri, name }
 }
+
+// Connexion simplifiée : colle un lien ou l'ID du fichier Drive (voir
+// utils/driveLink.ts) au lieu du Picker Google — seul VITE_GOOGLE_CLIENT_ID
+// est alors requis (scope drive.file), pas la clé API Picker ni le n° de projet.
+export async function connectFileWithId(fileId: string, name = 'database.json'): Promise<ConnectedFile> {
+  await Promise.all([Preferences.set({ key: URI_KEY, value: fileId }), Preferences.set({ key: NAME_KEY, value: name })])
+  return { uri: fileId, name }
+}

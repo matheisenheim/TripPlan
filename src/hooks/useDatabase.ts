@@ -10,6 +10,7 @@ import {
   ReadError,
   SchemaTooNewError,
   connectFile as pickAndConnectFile,
+  connectFileWithId,
   fetchRemoteDatabase,
   getRemoteVersion,
   loadDatabase,
@@ -47,6 +48,8 @@ export interface UseDatabaseResult {
   recentlySynced: boolean
   retrySave: () => Promise<void>
   connectFile: () => Promise<void>
+  // Connexion Drive simplifiée : ID/lien collé (pas de Picker Google).
+  connectFileWithId: (fileId: string) => Promise<void>
   selectTrip: (id: string) => void
   // Remplace toute la base par `database` (après validation/migration côté appelant),
   // persistée sur le backend actif (localStorage en mode local, fichier Drive sinon).
@@ -274,6 +277,21 @@ export function useDatabase(): UseDatabaseResult {
       setStatus('no-file')
     }
   }, [refresh])
+
+  const connectFileWithIdCb = useCallback(
+    async (fileId: string) => {
+      setStatus('loading')
+      setError(undefined)
+      try {
+        await connectFileWithId(fileId)
+        await refresh()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e))
+        setStatus('no-file')
+      }
+    },
+    [refresh],
+  )
 
   const selectTrip = useCallback((id: string) => {
     setSelectedTripId(id)
@@ -712,6 +730,7 @@ export function useDatabase(): UseDatabaseResult {
     fileName,
     localMode,
     connectFile,
+    connectFileWithId: connectFileWithIdCb,
     selectTrip,
     importDatabase,
     addTrip,
