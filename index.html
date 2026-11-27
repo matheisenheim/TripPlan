@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#F4F1EA" />
+    <!-- GitHub Pages sert le HTML avec un cache de 10 min : un index.html trop vieux
+         référence des assets hashés supprimés au déploiement suivant → page blanche.
+         On force la revalidation du document à chaque chargement. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>TripPlan</title>
   </head>
   <body>
