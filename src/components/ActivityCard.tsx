@@ -238,16 +238,28 @@ export default function ActivityCard({
         )}
         {(onToggleWishlist || onSchedule || onSetTime || onRate || onUnassign || onToggleCalendar) && (
           <div className="activity-card__actions">
-            {!compact && onToggleWishlist && !activity.wishlist && (
-              <Button
-                iconOnly
-                variant="ghost"
-                size="sm"
-                icon="flag"
-                aria-label="Marquer comme envie de faire"
-                onClick={handleWishlistClick}
-              />
-            )}
+            {!compact && onToggleWishlist &&
+              (activity.wishlist ? (
+                <Chip
+                  as="button"
+                  tone="vermillon"
+                  active
+                  icon="flag"
+                  aria-label="Retirer de la liste d'envies"
+                  onClick={handleWishlistClick}
+                >
+                  {wishlistLabel}
+                </Chip>
+              ) : (
+                <Button
+                  iconOnly
+                  variant="ghost"
+                  size="sm"
+                  icon="flag"
+                  aria-label="Marquer comme envie de faire"
+                  onClick={handleWishlistClick}
+                />
+              ))}
             {onSchedule &&
               (activity.date ? (
                 <Chip

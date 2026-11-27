@@ -22,6 +22,9 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - PWA installable : `manifest.webmanifest` + icônes PNG (192/512/maskable/180, générées par `npm run icons`) + service worker existant → Chrome mobile propose « Installer l'application » ; le SW met en cache toutes les ressources same-origin (manifest, icônes inclus)
 
 ### Corrigé
+- Carte d'activité : le wishlist est retirable (chip « envie de faire » cliquable quand déjà marqué) ; modifier/supprimer restent accessibles par le swipe vers la gauche
+- Carte : clic sur une activité proposée sans coordonnées → la carte se centre sur l'étape associée ; les propositions sont géocodées best-effort à l'ajout (en ligne)
+
 - Afficheur d'erreurs JS (`index.html`) : les erreurs de chargement de ressources (event `error` sur une balise, « undefined:0:0 ») s'affichent en bandeau discret avec l'URL (« Ressource introuvable : … ») ; les vraies erreurs JS gardent le bandeau rouge avec stack
 - `index.html` : indicateur « Chargement de TripPlan… » tant que le JS n'a pas démarré (retiré par `main.tsx` au montage) — permet de distinguer page blanche « HTML servi mais JS bloqué » vs « rien ne répond »
 

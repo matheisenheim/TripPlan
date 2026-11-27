@@ -9,6 +9,7 @@ import CalendarEventsModal from './CalendarEventsModal'
 import SuggestionsModal from './SuggestionsModal'
 import { createCalendarEvent, deleteCalendarEvent, type CalendarEvent } from '../services/googleCalendar'
 import type { ActivitySuggestion } from '../data/activitySuggestions'
+import { searchPlaces } from '../utils/nominatimSearch'
 import ActivityRatingModal from './ActivityRatingModal'
 import DayPickerModal from './DayPickerModal'
 import TimePickerModal from './TimePickerModal'
@@ -178,16 +179,28 @@ export default function ActivitiesView({
     }
   }
 
-  function handleAddSuggestion(s: ActivitySuggestion) {
+  async function handleAddSuggestion(s: ActivitySuggestion) {
     const stage = trip.stages.find((st) => st.city === s.city)
-    void onAddActivity({
+    // Sans coordonnées embarquées, on tente un géocodage (en ligne) pour que la
+    // carte puisse se centrer sur le lieu ; hors ligne, l'activité est quand même
+    // ajoutée (la carte centrera sur l'étape associée).
+    let coordinates = s.coordinates
+    if (!coordinates) {
+      try {
+        const found = await searchPlaces(`${s.name}, ${s.city}`)
+        if (found[0]) coordinates = { lat: found[0].lat, lng: found[0].lng }
+      } catch {
+        // hors ligne : pas de géocodage
+      }
+    }
+    await onAddActivity({
       name: s.name,
       stageGroup: s.city,
       stageId: stage?.id,
       categories: [s.category],
       mapsUrl: s.mapsUrl ?? '',
       notes: s.notes,
-      coordinates: s.coordinates,
+      coordinates,
     })
   }
 

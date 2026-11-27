@@ -407,6 +407,11 @@ export default function MapView({
             if (activity?.coordinates) {
               map.jumpTo({ center: [activity.coordinates.lng, activity.coordinates.lat], zoom: 16 })
               activityMarkerByIdRef.current[selectedActivityId]?.togglePopup()
+            } else {
+              // Activité sans coordonnées (proposée sans géocodage) : on centre
+              // sur l'étape associée si elle existe.
+              const stage = activity?.stageId ? sortedStages.find((s) => s.id === activity.stageId) : undefined
+              if (stage) map.jumpTo({ center: [stage.coordinates.lng, stage.coordinates.lat], zoom: 13 })
             }
           } else if (selectedStageId) {
             const stage = sortedStages.find((s) => s.id === selectedStageId)
