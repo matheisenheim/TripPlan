@@ -10,6 +10,9 @@ export interface ActivitySuggestion {
   notes?: string
   mapsUrl?: string
   coordinates?: Coordinates
+  date?: string // ISO — événement à cette date (ajouté comme activité planifiée)
+  time?: string // "HH:mm" — heure de début de l'événement
+  source?: string // nom de la source en ligne (OpenStreetMap, Wikidata, …), affiché en méta
 }
 
 export const ACTIVITY_SUGGESTIONS: ActivitySuggestion[] = [

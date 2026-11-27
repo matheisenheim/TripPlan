@@ -201,6 +201,8 @@ export default function ActivitiesView({
       mapsUrl: s.mapsUrl ?? '',
       notes: s.notes,
       coordinates,
+      date: s.date,
+      time: s.time,
     })
   }
 
