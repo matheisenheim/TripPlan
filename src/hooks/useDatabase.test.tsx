@@ -29,6 +29,23 @@ describe('useDatabase — mode local (hors connexion)', () => {
     expect((await loadLocalDatabase()).trips).toHaveLength(1)
   })
 
+  it('importDatabase remplace toute la base et la persiste en local', async () => {
+    const { result } = renderHook(() => useDatabase())
+    await waitFor(() => expect(result.current.status).toBe('ready'), { timeout: 5000 })
+    await act(async () => {
+      await result.current.addTrip({ name: 'Vieux voyage' })
+    })
+    expect(result.current.trips).toHaveLength(1)
+
+    await act(async () => {
+      await result.current.importDatabase({ trips: [{ id: 't9', name: 'Base importée', stages: [] }] })
+    })
+
+    expect(result.current.trips).toHaveLength(1)
+    expect(result.current.trips[0]?.name).toBe('Base importée')
+    expect((await loadLocalDatabase()).trips[0]?.name).toBe('Base importée')
+  })
+
   it('deleteTrip supprime le voyage et resélectionne le premier restant', async () => {
     const { result } = renderHook(() => useDatabase())
     await waitFor(() => expect(result.current.status).toBe('ready'), { timeout: 5000 })

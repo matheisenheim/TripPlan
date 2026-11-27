@@ -10,6 +10,9 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Export / import de la base de voyages en JSON depuis les paramètres (⚙ → Base de voyages) : en mode local la base vit dans le navigateur, donc vider les données du site la fait disparaître — exporter régulièrement pour garder une sauvegarde
+
 ### Corrigé
 - Afficheur d'erreurs JS (`index.html`) : les erreurs de chargement de ressources (event `error` sur une balise, « undefined:0:0 ») s'affichent en bandeau discret avec l'URL (« Ressource introuvable : … ») ; les vraies erreurs JS gardent le bandeau rouge avec stack
 - `index.html` : indicateur « Chargement de TripPlan… » tant que le JS n'a pas démarré (retiré par `main.tsx` au montage) — permet de distinguer page blanche « HTML servi mais JS bloqué » vs « rien ne répond »

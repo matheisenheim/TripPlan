@@ -9,6 +9,8 @@ import ResourcesView from './components/ResourcesView'
 import SettingsModal from './components/SettingsModal'
 import TripFormModal from './components/TripFormModal'
 import { useDatabase } from './hooks/useDatabase'
+import { parseDatabaseContent } from './data/databaseRepository'
+import { CURRENT_SCHEMA_VERSION } from './data/migrations'
 import { useOfflineMap } from './hooks/useOfflineMap'
 import { useTheme } from './hooks/useTheme'
 import { closeTopModal } from './utils/backButtonStack'
@@ -136,6 +138,26 @@ function App() {
     setFocusStageId(null)
     setFocusActivityId(activityId)
     setTab('activities')
+  }
+
+  function handleExportDatabase() {
+    const data = { schemaVersion: CURRENT_SCHEMA_VERSION, trips }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tripplan-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleImportDatabaseFile(file: File) {
+    try {
+      const { database } = parseDatabaseContent(await file.text())
+      await db.importDatabase(database)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : String(e))
+    }
   }
 
   const loading = databaseStatus === 'loading' || offlineMapStatus === 'loading'
@@ -314,6 +336,8 @@ function App() {
           databaseFileName={databaseFileName}
           databaseLocalMode={databaseLocalMode}
           onConnectDatabaseFile={db.connectFile}
+          onExportDatabase={handleExportDatabase}
+          onImportDatabaseFile={handleImportDatabaseFile}
           mapStatus={offlineMapStatus}
           mapError={offlineMapError}
           mapFileName={offlineMapFileName}

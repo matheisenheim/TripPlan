@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import type { DatabaseStatus } from '../hooks/useDatabase'
 import type { MapMode } from '../data/offlineMapRepository'
@@ -25,6 +25,8 @@ interface SettingsModalProps {
   databaseFileName?: string
   databaseLocalMode?: boolean
   onConnectDatabaseFile: () => Promise<void>
+  onExportDatabase: () => void
+  onImportDatabaseFile: (file: File) => void
   mapStatus: OfflineMapStatus
   mapError?: string
   mapFileName?: string
@@ -46,6 +48,8 @@ export default function SettingsModal({
   databaseFileName,
   databaseLocalMode,
   onConnectDatabaseFile,
+  onExportDatabase,
+  onImportDatabaseFile,
   mapStatus,
   mapError,
   mapFileName,
@@ -57,6 +61,7 @@ export default function SettingsModal({
   const databaseConnected = databaseStatus === 'ready'
   const mapConnected = mapStatus === 'ready'
   const [retrying, setRetrying] = useState(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   async function handleRetrySave() {
     setRetrying(true)
@@ -136,6 +141,30 @@ export default function SettingsModal({
             Sans fichier Drive, tes données restent dans ce navigateur et l'app fonctionne hors connexion.
           </p>
         )}
+
+        <div className="settings-actions">
+          <Button variant="secondary" icon="external" onClick={onExportDatabase}>
+            Exporter (.json)
+          </Button>
+          <Button variant="secondary" icon="plus" onClick={() => importInputRef.current?.click()}>
+            Importer (.json)
+          </Button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (f) void onImportDatabaseFile(f)
+            }}
+          />
+        </div>
+        <p className="settings-hint">
+          Export/import de la base active en JSON. En mode local, la base vit dans ce navigateur : vider les
+          données du site l'efface — exporte régulièrement pour garder une sauvegarde.
+        </p>
 
         {databaseSaveError && (
           <>

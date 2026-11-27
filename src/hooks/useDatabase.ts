@@ -18,6 +18,7 @@ import {
 } from '../data/databaseRepository'
 import { uniqueId } from '../utils/activityId'
 import { loadLocalDatabase, saveLocalDatabase } from '../data/localDatabaseRepository'
+import { migrateDatabase } from '../data/migrations'
 
 // Intervalle du polling léger de fraîcheur (voir l'effet plus bas) — vérification
 // de métadonnée seule, jamais de retéléchargement tant que rien n'a changé.
@@ -47,6 +48,9 @@ export interface UseDatabaseResult {
   retrySave: () => Promise<void>
   connectFile: () => Promise<void>
   selectTrip: (id: string) => void
+  // Remplace toute la base par `database` (après validation/migration côté appelant),
+  // persistée sur le backend actif (localStorage en mode local, fichier Drive sinon).
+  importDatabase: (database: Database) => Promise<void>
   addTrip: (input: Omit<Trip, 'id' | 'stages'>) => Promise<Trip>
   updateTrip: (id: string, patch: Partial<Omit<Trip, 'id' | 'stages' | 'activities'>>) => Promise<void>
   deleteTrip: (id: string) => Promise<void>
@@ -274,6 +278,24 @@ export function useDatabase(): UseDatabaseResult {
   const selectTrip = useCallback((id: string) => {
     setSelectedTripId(id)
     Preferences.set({ key: SELECTED_TRIP_KEY, value: id })
+  }, [])
+
+  const importDatabase = useCallback(async (database: Database) => {
+    const { database: current } = migrateDatabase(database)
+    setTrips(current.trips)
+    latestTripsRef.current = current.trips
+    baseVersionRef.current = null
+    pendingTransformsRef.current = []
+    pendingWriteRef.current = false
+    const file = fileRef.current
+    if (!file) {
+      await saveLocalDatabase(current)
+    } else {
+      await saveDatabase(file, current)
+      baseVersionRef.current = await getRemoteVersion(file).catch(() => baseVersionRef.current)
+    }
+    const { value: storedId } = await Preferences.get({ key: SELECTED_TRIP_KEY })
+    setSelectedTripId(storedId && current.trips.some((t) => t.id === storedId) ? storedId : (current.trips[0]?.id ?? null))
   }, [])
 
   // Boucle d'écriture : toujours re-lue via `latestTripsRef` au moment de
@@ -691,6 +713,7 @@ export function useDatabase(): UseDatabaseResult {
     localMode,
     connectFile,
     selectTrip,
+    importDatabase,
     addTrip,
     updateTrip,
     deleteTrip,

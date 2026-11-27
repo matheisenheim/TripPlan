@@ -176,6 +176,12 @@
   word-break: break-word;
 }
 
+.settings-actions {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
 .tab-bar {
   flex-shrink: 0;
   display: flex;
