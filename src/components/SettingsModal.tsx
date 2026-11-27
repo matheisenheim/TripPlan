@@ -200,7 +200,7 @@ export default function SettingsModal({
         )}
       </section>
 
-      <p className="settings-hint settings-version">Japplan v{__APP_VERSION__}</p>
+      <p className="settings-hint settings-version">TripPlan v{__APP_VERSION__}</p>
     </Sheet>
   )
 }
