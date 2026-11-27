@@ -14,6 +14,7 @@ versionnage suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - Mode local hors connexion : sans fichier Google Drive connecté, la base de voyages est lue et écrite dans le localStorage du navigateur
 - Carte hors ligne (PMTiles) sur le web : le fichier `.pmtiles` est choisi via le sélecteur local, stocké en IndexedDB et servi en mémoire — la carte fonctionne sans aucun réseau
 - Bouton « Vue par défaut » dans l'onglet Carte : enregistre le centre et le zoom actuels comme vue de démarrage de la carte
+- Choix du lieu affiché par défaut sur la carte à la création d'un voyage (champ « Lieu affiché par défaut sur la carte » du formulaire « Nouveau voyage ») : remplace le repli en dur centré sur le Japon
 
 ### Modifié
 - Projet renommé Japplan → TripPlan (titre de l'onglet, nom du package, README, page de confidentialité, pied des paramètres)
